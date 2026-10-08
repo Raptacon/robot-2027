@@ -68,7 +68,7 @@ ignore = ["E731"]
 "tests/test_virtual_analog.py" = ["E402"]
 
 [tool.pyright]
-include = ["robot.py", "subsystem", "utils", "tests"]
+include = ["robot.py", "config", "subsystem", "utils", "tests"]
 exclude = ["**/__pycache__", "docs", "examples"]
 pythonVersion = "3.11"
 typeCheckingMode = "basic"
