@@ -170,6 +170,26 @@ class SwerveModule:
         self.io.set_steer_angle(target.angle_rad)
         self.io.set_drive_velocity(target.speed_mps, self.config.drive_feedforward_volts(target.speed_mps))
 
+    def set_angle(self, angle_rad: float) -> None:
+        """Point the wheel at ``angle_rad`` without rolling it (used by X-lock).
+
+        :meth:`set_target` keeps the old angle when the speed is 0, so this is
+        the way to turn a wheel that isn't driving. It still takes the short
+        way round (the wheel may end up pointing the opposite way, which is
+        the same line).
+
+        Args:
+            angle_rad: Direction to point, radians, 0 toward the robot's front.
+        """
+        if not self.seeded:
+            self.setpoint = ModuleTarget()
+            self.io.stop()
+            return
+        target = optimize(ModuleTarget(0.0, angle_rad), self.inputs.steer_angle_rad)
+        self.setpoint = ModuleTarget(0.0, target.angle_rad)
+        self.io.set_steer_angle(target.angle_rad)
+        self.io.set_drive_velocity(0.0, self.config.drive_feedforward_volts(0.0))
+
     def stop(self) -> None:
         """Stop both motors."""
         self.setpoint = ModuleTarget(0.0, self.setpoint.angle_rad)

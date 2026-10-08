@@ -29,6 +29,8 @@ Example (in simulation):
 
 from collections.abc import Sequence
 
+import math
+
 import commands2
 import ntcore
 import wpilib
@@ -174,6 +176,29 @@ class Drivetrain(commands2.Subsystem):
         self.commanded = ChassisSpeeds()
         for module in self.modules:
             module.stop()
+
+    def lock_wheels_x(self) -> None:
+        """Stop and point every wheel at the robot's center, making an X.
+
+        With the wheels in an X the robot is hard to push in any direction,
+        which helps hold position against defense. Call it every loop while
+        the X-lock button is held.
+        """
+        self.commanded = ChassisSpeeds()
+        for module, (x, y) in zip(self.modules, self._module_xy):
+            module.set_angle(math.atan2(y, x))
+
+    def reset_heading(self, heading_rad: float) -> None:
+        """Tell odometry which way the robot faces now, keeping its position.
+
+        The driver uses this to re-zero field-relative driving: point the
+        robot away from your alliance wall and press the button.
+
+        Args:
+            heading_rad: The robot's heading on the field, radians (0 = facing
+                away from the blue alliance wall, pi = facing away from red).
+        """
+        self.reset_pose(Pose2d(self.pose.translation(), Rotation2d(heading_rad)))
 
     def reset_pose(self, pose: Pose2d) -> None:
         """Tell odometry where the robot is (for example, at the start of autonomous)."""
