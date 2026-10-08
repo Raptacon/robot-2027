@@ -65,6 +65,10 @@ Code is formatted with `ruff format` and linted with `ruff check`; settings live
 - Read each hardware signal once per loop into an inputs dataclass and log that object; publish dashboard-only values at 10 Hz.
 - Configure every SparkMax from defaults on each boot; don't rely on controller flash.
 
+### Robot config (`config/`)
+
+`config/module_presets.py` holds the SDS gearing presets (MK4i L1 to L3, MK4 L1 to L4; `MK4I_L2` is the default) with steer and encoder direction. `config/robot_config.py` defines the frozen `CornerConfig` and `RobotConfig` types; each robot is one file in `config/robots/` exporting `CONFIG`, registered in `config/loader.py`. `load_robot_config()` picks the robot from the persistent NT value `/robot/name` (default `swerve_test_bot`). Offsets are in rotations, wrapped to [-0.5, 0.5); log every offset or wheel radius change in `doc/swerve/calibration-log.md`. `tests/drivetrain/test_swerve_config.py` checks every preset and robot config.
+
 ### Controller Config (`utils/controller/`) and Input Factory (`utils/input/`)
 
 Shared data model (`utils/controller/model.py`) defines `ActionDefinition`, `ControllerConfig`, and `FullConfig`. Actions use qualified names: `group.name` (e.g. `drivetrain.rotate`). Input types: BUTTON, ANALOG, OUTPUT, BOOLEAN_TRIGGER, VIRTUAL_ANALOG. D-pad directions are treated as buttons. YAML I/O in `config_io.py`. Portable curve math in `utils/math/curves.py`.
@@ -101,6 +105,14 @@ GitHub Actions (`.github/workflows/robot_ci.yml`):
 - pip caching on every job, and a new push cancels the superseded run
 - pdoc docs build, deployed to GitHub Pages from `main`
 - Dependabot keeps GitHub Actions versions current
+
+## Documentation for students
+The code's main readers are students who are fairly new to programming. Code they will read or edit (config, subsystems, commands, utilities) needs:
+ - A module docstring that says what the file is for and how to use it, in plain language
+ - Docstrings on every public class, function and property with `Args:`, `Returns:` and units (meters, radians, rotations)
+ - A short `>>>` example on anything a student calls or edits directly
+ - Comments on config values saying where the number came from and how to re-measure it
+Docstring examples in `config/` are run by `tests/drivetrain/test_swerve_config.py` (doctest), so keep them correct; add new modules with examples to that test.
 
 ## Unit Tests
  - Unit tests should be encouraged and written
