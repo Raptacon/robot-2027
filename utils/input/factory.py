@@ -10,7 +10,7 @@ scheduler cycle via an internal subsystem.
 
 Usage::
 
-    factory = InputFactory(config_path="data/inputs/controller.yaml")
+    factory = InputFactory(config_path="data/inputs/swerve_test_bot.yaml")
     speed = factory.getAnalog("drivetrain.speed")
     fire = factory.getButton("intake.run")
     rumble = factory.getRumbleControl("general.rumble_left")

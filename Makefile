@@ -31,9 +31,7 @@ ${VENV}:
 	${PYTHON} -m venv ${VENV}
 
 lint: ## Runs the linter(s)
-	# From CI pipeline. We are more strict in our local check
-	# --select=E9,F6,F7,F8,F4,W1,W2,W4,W5,W6,E11 --ignore W293
-	${VENVBIN}/flake8 . --count --select=E9,F6,F7,F8,F4,W1,W2,W4,W5,W6,E11 --ignore W293,W503 --show-source --statistics --exclude */tests/pyfrc*,utils/yaml/*,.venv*/,venv*/,exclude=tests/pyfrc*,utils/yaml/*,.venv*/,venv*/,examples/robotpy
+	${VENVBIN}/flake8 .
 
 test: setup_${VENV} lint  coverage ## Does a lint and then test
 	${VENVBIN}/${PYTHON} -m robotpy test
@@ -53,10 +51,10 @@ realclean: clean
 	rm -fr ${VENV}
 
 docker: docker_build
-	docker run --rm -ti -v $$(PWD):/src raptacon2022_build bash
+	docker run --rm -ti -v $$(PWD):/src raptacon2027_build bash
 
 docker_build:
-	docker build . --tag raptacon2022_build
+	docker build . --tag raptacon2027_build
 
 # Installs the 3rd party dependencies such as photonvision and rapatcon3200 (whatever is in the toml esp in the requires section)
 # https://docs.wpilib.org/en/stable/docs/software/python/pyproject_toml.html
@@ -65,39 +63,3 @@ sync:
 
 deploy: sync
 	${PYTHON} -m robotpy deploy
-
-gui-exe: setup_${VENV} ## Build standalone Controller Config GUI executable
-	${VENVBIN}/pip install pyinstaller
-	${VENVBIN}/pip install -r host/requirements.txt
-ifeq ($(OS), Windows_NT)
-	cd host && ../${VENVBIN}/pyinstaller controller_config_win.spec --distpath ../dist --workpath ../build/gui --clean -y
-else ifeq ($(shell uname),Darwin)
-	cd host && ../${VENVBIN}/pyinstaller controller_config_mac.spec --distpath ../dist --workpath ../build/gui --clean -y
-else
-	cd host && ../${VENVBIN}/pyinstaller controller_config_linux.spec --distpath ../dist --workpath ../build/gui --clean -y
-endif
-	@echo "Built in: dist/"
-
-match-monitor-exe: setup_${VENV} ## Build standalone Match Monitor executable (Windows only)
-	${VENVBIN}/pip install pyinstaller
-	${VENVBIN}/pip install -r host/requirements.txt
-ifeq ($(OS), Windows_NT)
-	${VENVBIN}/python host/make_ico.py
-	cd host && ../${VENVBIN}/pyinstaller match_monitor_win.spec --distpath ../dist --workpath ../build/match_monitor --clean -y
-	@echo "Built: dist/raptacon-match-monitor.exe"
-else
-	@echo "ERROR: Match Monitor exe is Windows-only (uses Windows tray/console APIs)"
-	@exit 1
-endif
-
-nfc-exe: setup_${VENV} ## Build standalone NFC Battery Tag Tool executable
-	${VENVBIN}/pip install pyinstaller
-	${VENVBIN}/pip install -r host/requirements.txt
-ifeq ($(OS), Windows_NT)
-	cd host && ../${VENVBIN}/pyinstaller nfc_tool_win.spec --distpath ../dist --workpath ../build/gui --clean -y
-else ifeq ($(shell uname),Darwin)
-	cd host && ../${VENVBIN}/pyinstaller nfc_tool_mac.spec --distpath ../dist --workpath ../build/gui --clean -y
-else
-	cd host && ../${VENVBIN}/pyinstaller nfc_tool_linux.spec --distpath ../dist --workpath ../build/gui --clean -y
-endif
-	@echo "Built in: dist/"

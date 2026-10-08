@@ -2,15 +2,18 @@
 Continuous loop-timing instrumentation.
 
 Measures how much of the timed robot periodic budget the robot code consumes,
-broken down by channel (e.g. userCode vs scheduler).  Stats are published
-to SmartDashboard every cycle so they are always visible — not only on
-overrun like the built-in CommandScheduler Watchdog.
+broken down by channel (e.g. userCode vs scheduler).  Stats are recorded
+every cycle and published to NetworkTables under /FrameTiming/ at 10 Hz by
+default, so they are always visible (not only on overrun like the built-in
+CommandScheduler Watchdog) without adding NT writes to every loop.
 
 Timing uses FPGA timestamps (microsecond resolution on real hardware).
 In simulation the values reflect simulated time, not wall-clock.
 """
 
 import math
+
+import ntcore
 import wpilib
 
 
@@ -93,10 +96,21 @@ class LoopTimer:
         timer.publish()
     """
 
-    def __init__(self, budget_sec: float):
+    _STAT_NAMES = ("lastMs", "minMs", "maxMs", "avgMs", "stddevMs",
+                   "count", "budgetPct")
+
+    def __init__(self, budget_sec: float, publish_period_sec: float = 0.1):
         self._budget_ms = budget_sec * 1000.0
+        self._publish_period = publish_period_sec
+        self._last_publish = -math.inf
         self._channels: dict[str, LoopTimingStats] = {}
         self._starts: dict[str, float] = {}
+        self._table = ntcore.NetworkTableInstance.getDefault().getTable(
+            "FrameTiming")
+        self._channel_pubs: dict[str, dict[str, ntcore.DoublePublisher]] = {}
+        self._total_ms_pub = self._table.getDoubleTopic("totalMs").publish()
+        self._total_pct_pub = self._table.getDoubleTopic(
+            "totalBudgetPct").publish()
         self._alert_info = wpilib.Alert(
             "Frame Timing", wpilib.Alert.AlertType.kInfo
         )
@@ -109,6 +123,11 @@ class LoopTimer:
 
     def add_channel(self, name: str):
         self._channels[name] = LoopTimingStats()
+        sub = self._table.getSubTable(name)
+        self._channel_pubs[name] = {
+            stat: sub.getDoubleTopic(stat).publish()
+            for stat in self._STAT_NAMES
+        }
 
     def start(self, name: str):
         self._starts[name] = wpilib.Timer.getFPGATimestamp()
@@ -124,29 +143,16 @@ class LoopTimer:
         self._starts.clear()
 
     def publish(self):
-        total_ms = 0.0
-        for name, stats in self._channels.items():
-            prefix = f"FrameTiming/{name}"
-            wpilib.SmartDashboard.putNumber(f"{prefix}/lastMs", stats.last_ms)
-            wpilib.SmartDashboard.putNumber(f"{prefix}/minMs", stats.min_ms)
-            wpilib.SmartDashboard.putNumber(f"{prefix}/maxMs", stats.max_ms)
-            wpilib.SmartDashboard.putNumber(f"{prefix}/avgMs", stats.avg_ms)
-            wpilib.SmartDashboard.putNumber(f"{prefix}/stddevMs", stats.stddev_ms)
-            wpilib.SmartDashboard.putNumber(f"{prefix}/count", stats.count)
-            if self._budget_ms > 0:
-                wpilib.SmartDashboard.putNumber(
-                    f"{prefix}/budgetPct",
-                    (stats.last_ms / self._budget_ms) * 100.0,
-                )
-            total_ms += stats.last_ms
-
-        wpilib.SmartDashboard.putNumber("FrameTiming/totalMs", total_ms)
+        """Update alerts every call; write NT values at the publish rate."""
+        total_ms = sum(stats.last_ms for stats in self._channels.values())
         total_pct = 0.0
         if self._budget_ms > 0:
             total_pct = (total_ms / self._budget_ms) * 100.0
-            wpilib.SmartDashboard.putNumber(
-                "FrameTiming/totalBudgetPct", total_pct,
-            )
+
+        now = wpilib.Timer.getFPGATimestamp()
+        if now - self._last_publish >= self._publish_period:
+            self._last_publish = now
+            self._publish_nt(total_ms, total_pct)
 
         # Alert based on budget usage
         overrun = total_pct >= 100.0
@@ -169,3 +175,19 @@ class LoopTimer:
             self._alert_info.setText(
                 f"Frame Timing: {total_pct:.0f}%"
             )
+
+    def _publish_nt(self, total_ms: float, total_pct: float):
+        for name, stats in self._channels.items():
+            pubs = self._channel_pubs[name]
+            pubs["lastMs"].set(stats.last_ms)
+            pubs["minMs"].set(stats.min_ms)
+            pubs["maxMs"].set(stats.max_ms)
+            pubs["avgMs"].set(stats.avg_ms)
+            pubs["stddevMs"].set(stats.stddev_ms)
+            pubs["count"].set(stats.count)
+            if self._budget_ms > 0:
+                pubs["budgetPct"].set(
+                    (stats.last_ms / self._budget_ms) * 100.0)
+        self._total_ms_pub.set(total_ms)
+        if self._budget_ms > 0:
+            self._total_pct_pub.set(total_pct)

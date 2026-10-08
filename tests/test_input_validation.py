@@ -20,7 +20,7 @@ from utils.input.validation import validate_config
 # Paths to config files
 _DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "inputs")
 _UNIT_TEST_YAML = os.path.join(_DATA_DIR, "general_unit_test_mappings.yaml")
-_CONTROLLER_YAML = os.path.join(_DATA_DIR, "controller.yaml")
+_CONTROLLER_YAML = os.path.join(_DATA_DIR, "swerve_test_bot.yaml")
 
 
 class TestUnitTestMappingsConfig:
@@ -169,11 +169,10 @@ class TestUnitTestMappingsConfig:
 
 
 class TestControllerYamlConfig:
-    """Validate data/controller.yaml (real robot config)."""
+    """Validate data/inputs/swerve_test_bot.yaml (real robot config)."""
 
     def test_loads_without_error(self):
-        if not os.path.exists(_CONTROLLER_YAML):
-            return  # Skip if not present
+        assert os.path.exists(_CONTROLLER_YAML)
         config = load_config(_CONTROLLER_YAML)
         assert config is not None
 

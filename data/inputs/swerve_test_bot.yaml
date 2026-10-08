@@ -1,0 +1,85 @@
+version: "1.0.0"
+# Swerve test bot controller mapping (robot-2027 baseline).
+# Drive bindings match robot-2026 so drivers don't relearn anything.
+# translate_x/translate_y are raw on purpose: InputFactory shapes each axis
+# separately, which makes a square deadband and bends diagonals. TeleopDrive
+# applies the deadband, curve and slew to the stick vector's length instead.
+actions:
+  drivetrain:
+    translate_x:
+      description: Forward/backward translation (shaped radially in TeleopDrive)
+      input_type: analog
+      trigger_mode: raw
+    translate_y:
+      description: Left/right strafe (shaped radially in TeleopDrive)
+      input_type: analog
+      trigger_mode: raw
+    rotate:
+      description: Rotation
+      input_type: analog
+      trigger_mode: scaled
+      deadband: 0.1
+      inversion: true
+    robot_relative:
+      description: Hold for robot-relative driving
+      input_type: button
+      trigger_mode: while_true
+    slow_toggle:
+      description: Toggle slow mode (speed limit in TeleopDrive)
+      input_type: button
+      trigger_mode: on_true
+    reset_heading:
+      description: Re-zero heading to face away from the current alliance wall
+      input_type: button
+      trigger_mode: on_true
+    x_lock:
+      description: Hold to lock the wheels in an X
+      input_type: button
+      trigger_mode: while_true
+    snap_0:
+      description: Snap heading to 0 degrees (away from own alliance wall)
+      input_type: button
+      trigger_mode: on_true
+    snap_90:
+      description: Snap heading to 90 degrees (left)
+      input_type: button
+      trigger_mode: on_true
+    snap_180:
+      description: Snap heading to 180 degrees (toward own alliance wall)
+      input_type: button
+      trigger_mode: on_true
+    snap_270:
+      description: Snap heading to 270 degrees (right)
+      input_type: button
+      trigger_mode: on_true
+    cancel_all:
+      description: Emergency cancel all commands
+      input_type: button
+      trigger_mode: on_true
+    auto_align:
+      description: Hold to auto-align to a target (returns with vision in M7)
+      input_type: boolean_trigger
+      trigger_mode: while_true
+      threshold: 0.25
+
+controllers:
+  0:
+    name: Driver
+    bindings:
+      left_stick_y: [drivetrain.translate_x]
+      left_stick_x: [drivetrain.translate_y]
+      right_stick_x: [drivetrain.rotate]
+      right_bumper: [drivetrain.robot_relative]
+      y_button: [drivetrain.slow_toggle]
+      start_button: [drivetrain.reset_heading]
+      x_button: [drivetrain.x_lock]
+      pov_up: [drivetrain.snap_0]
+      pov_left: [drivetrain.snap_90]
+      pov_down: [drivetrain.snap_180]
+      pov_right: [drivetrain.snap_270]
+      back_button: [drivetrain.cancel_all]
+      right_trigger: [drivetrain.auto_align]
+
+  1:
+    name: Operator
+    bindings: {}

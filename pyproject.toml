@@ -35,7 +35,6 @@ requires = [
     "pyyaml",
     "photonlibpy",
     "robotpy-urcl",
-    "pyserial"
 ]
 
 pyfrc.isolated = true

@@ -1,6 +1,0 @@
-robotpy[all]
-photonlibpy
-robotpy-urcl
-pyyaml
-
-raptacon3200

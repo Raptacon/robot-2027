@@ -57,7 +57,7 @@ How to run these tests:
     python -m robotpy test
 
 How it detects crashes:
-    - robot.py's __callAndCatch method re-raises exceptions in sim mode,
+    - robot.py's callAndCatch method re-raises exceptions in sim mode,
       so any crash in teleopPeriodic/robotPeriodic becomes a test failure.
     - pyfrc's reraise fixture catches exceptions from the robot thread.
     - pyfrc.isolated = true (in pyproject.toml) runs each test in its own

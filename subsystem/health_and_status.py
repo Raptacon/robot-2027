@@ -20,11 +20,13 @@ class HealthAndStatus(commands2.SubsystemBase):
     Linux metrics (CPU, memory, network) are read from /proc and are skipped
     gracefully in simulation.
 
-    NT entry updateRateSec controls how often data is published (0 = every loop).
+    NT entry updateRateSec controls how often data is published (0 = every
+    loop). The default of 0.5 s keeps the dozens of NT writes and /proc reads
+    out of most loops; health values don't need to be faster than that.
     """
 
-    # Operator-adjustable update rate; 0 = update every periodic call (~50 Hz)
-    updateRateSec = ntproperty(f"{_B}/updateRateSec", 0.0,
+    # Operator-adjustable update rate in seconds; 0 = every periodic call
+    updateRateSec = ntproperty(f"{_B}/updateRateSec", 0.5,
                                writeDefault=False, persistent=True)
 
     # -- PDP --
