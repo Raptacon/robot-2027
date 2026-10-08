@@ -94,7 +94,7 @@ Drivetrain modules start at CAN ID 50 with 3 consecutive IDs per module (drive, 
 
 GitHub Actions (`.github/workflows/robot_ci.yml`):
 - Unit tests on Linux (with coverage report artifact and sim smoke test), Windows and macOS: `python -m robotpy coverage test`
-- RobotPy 2027 preview job (non-blocking) for early SystemCore breakage
+- RobotPy 2027 preview job (informational: stays green, reports breakage as a warning and in the job summary)
 - Lint (critical): `flake8 .`, rules from `.flake8` (same as `make lint`)
 - Lint (extra): complexity and line-length report (non-blocking)
 - pdoc docs build, deployed to GitHub Pages from `main`

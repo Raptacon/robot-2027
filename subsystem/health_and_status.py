@@ -10,7 +10,7 @@ _NET_IFACE = "eth0"
 _B = "/subsystems/HealthAndStatus"
 
 
-class HealthAndStatus(commands2.SubsystemBase):
+class HealthAndStatus(commands2.Subsystem):
     """
     Publishes Power Distribution Panel, RobotController, Driver Station,
     and Linux OS health data to NetworkTables under subsystems/HealthAndStatus/.
