@@ -53,7 +53,7 @@ Code is formatted with `ruff format` and linted with `ruff check`; settings live
 
 ### Entry Point & Robot Lifecycle
 
-`robot.py` defines `MyRobot(commands2.TimedCommandRobot)` running at 50 Hz (20 ms period). It sets up logging (wpilog via `DataLogManager`, Python logging via `utils/datalog_bridge.py`), loop timing (`utils/loop_timing.py`, published under `/FrameTiming/` at 10 Hz), `HealthAndStatus` telemetry, and the swerve `Drivetrain`. In simulation the drivetrain is built by `DrivetrainSim`; on the robot it is `None` until the hardware IO lands (M5).
+`robot.py` defines `MyRobot(commands2.TimedCommandRobot)` running at 50 Hz (20 ms period). It sets up logging (wpilog via `DataLogManager`, Python logging via `utils/datalog_bridge.py`), loop timing (`utils/loop_timing.py`, published under `/FrameTiming/` at 10 Hz), `HealthAndStatus` telemetry, and the swerve `Drivetrain`. In simulation the drivetrain is built by `DrivetrainSim`; on the robot `build_drivetrain()` (`subsystem/drivetrain/drivetrain_hardware.py`) builds it from the real IO and URCL logs every SparkMax. Test mode runs `ModuleCheck` (`commands/drive/module_check.py`), which points every wheel at 0, 90 and 180 degrees for checking directions on blocks.
 
 `MyRobot.callAndCatch` wraps calls to catch and log exceptions without crashing the robot on hardware (exceptions are re-raised in simulation so tests fail).
 
@@ -72,6 +72,8 @@ Code is formatted with `ruff format` and linted with `ruff check`; settings live
 ### Drivetrain IO (`subsystem/drivetrain/io/`)
 
 `ModuleIO`, `AbsoluteEncoderIO` and `GyroIO` are abstract interfaces, each with an inputs dataclass (`ModuleInputs`, `AbsoluteEncoderInputs`, `GyroInputs`) filled once per loop by `update_inputs()`. Sim versions (`module_io_sim.py`, `abs_encoder_sim.py`, `gyro_io_sim.py`) use the pure-Python `SimMotor` (kS/kV/kA model, no WPILib) and can add latency, boot delay, a dead sensor, offset error, gyro drift and gear or wheel mismatch for tests. The sim steer encoder reads 0 at boot like a real SparkMax, so code must seed it from the absolute encoder. `utils/inputs_publisher.py` publishes an inputs dataclass to NT (and so to the wpilog) every loop. Tests: `tests/drivetrain/test_io_sim.py`.
+
+Hardware versions: `module_io_spark.py` (two SparkMax + NEO, configured from defaults each boot with SI conversion factors and steer position wrapping; `SparkSettings` in the robot config holds current limits and gains), `abs_encoder_cancoder.py` (CANcoder magnet offset left at 0, the config offset is added in code), `gyro_io_onboard.py` (SystemCore built-in IMU, yaw unwrapped to a continuous angle) and `gyro_io_navx.py` (NavX on a roboRIO; NavX is clockwise-positive, so the sign is flipped). `build_gyro()` picks the onboard IMU when the controller has one. REV calls go through `_read()` so they work on 2026 (plain numbers) and 2027 (`Signal` objects). Tests: `tests/drivetrain/test_hardware_io.py` (vendor sims; skipped where a vendor library is missing, CAN IDs 15-17). Only one NavX may be created per pytest process, so tests pass `gyro=GyroIOSim()` to `build_drivetrain`.
 
 ### Drivetrain (`subsystem/drivetrain/`)
 

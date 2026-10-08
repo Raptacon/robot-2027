@@ -122,12 +122,14 @@ subsystem/drivetrain/
     abs_encoder_io.py    # AbsoluteEncoderIO interface
     abs_encoder_cancoder.py
     gyro_io.py           # GyroIO interface
-    gyro_io_navx.py
+    gyro_io_navx.py      # NavX on a roboRIO
+    gyro_io_onboard.py   # SystemCore built-in IMU
     gyro_io_sim.py
   swerve_math.py         # pure-Python kinematics, discretize, desaturate, optimize (same on 2026 and 2027)
   module.py              # optimize, cosine scale, feedforward, seeding + health checks
   drivetrain.py          # kinematics, discretize, desaturate, odometry, pose estimator, PathPlanner, SysId
   drivetrain_sim.py      # builds a sim drivetrain and tracks the true pose for tests
+  drivetrain_hardware.py # builds the real drivetrain (SparkMax, CANcoder, gyro picked by controller)
   odometry_sampler.py    # swappable: once per loop now, thread later
 commands/drive/
   teleop_drive.py        # field-relative per alliance, slow and robot-relative modes, heading snaps
@@ -135,6 +137,7 @@ commands/drive/
   heading_lock.py
   x_lock.py
   bindings.py            # connects the YAML driver actions to these commands
+  module_check.py        # test mode: points every wheel at 0, 90, 180 degrees for checking on blocks
   characterization.py    # drive SysId, wheel radius, steer step test
   calibrate_offsets.py   # test-mode: prints CANcoder offsets as Python
 physics.py               # thin: steps the sim IO and BatterySim
