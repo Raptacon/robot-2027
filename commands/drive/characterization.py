@@ -30,6 +30,10 @@ Where the results go:
     Log every change in doc/swerve/calibration-log.md.
 
 Example:
+    These tests are for the real robot; ``robot.py`` registers them on the
+    real drivetrain. This example uses the simulated drivetrain only so it
+    can run in CI without hardware.
+
     >>> import commands2
     >>> from config.robots.swerve_test_bot import CONFIG
     >>> from commands.drive.characterization import register_swerve

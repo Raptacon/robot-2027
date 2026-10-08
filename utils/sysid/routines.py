@@ -11,9 +11,10 @@ Run all four (:meth:`SysIdTests.all_tests` does them in order), then open
 the robot's wpilog in the WPILib SysId app to get the numbers. Forward then
 reverse brings a drivetrain back near where it started.
 
-On the real robot the readings go into the wpilog in the format the SysId
-app reads (URCL adds the SPARK MAX data). In simulation nothing is written to
-disk. Either way, after each test the dashboard shows a quick estimate under
+The tests are meant for the real robot, where the readings go into the
+wpilog in the format the SysId app reads (URCL adds the SPARK MAX data).
+They also run in simulation, which is how CI checks them; there nothing is
+written to disk, so test runs don't leave log files behind. Either way, after each test the dashboard shows a quick estimate under
 ``/Characterization/<name>/estimate/`` (see :mod:`utils.sysid.fit`).
 
 Example:
