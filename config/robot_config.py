@@ -81,7 +81,7 @@ def wrap_rotations(rot: float) -> float:
     return (rot + 0.5) % 1.0 - 0.5
 
 
-def square_corners(
+def mirrored_corners(
     x_m: float,
     y_m: float,
     first_can_id: int,
@@ -89,6 +89,9 @@ def square_corners(
     drive_inverted: tuple[bool, bool, bool, bool],
 ) -> tuple[CornerConfig, CornerConfig, CornerConfig, CornerConfig]:
     """Build FL, FR, BL, BR corners mirrored from the front-left position.
+
+    Works for any rectangular layout (x_m and y_m can differ). For other
+    layouts, list the four CornerConfig values directly.
 
     CAN IDs follow the team convention: 3 consecutive IDs per module (drive,
     steer, encoder) starting at first_can_id, in FL, FR, BL, BR order.

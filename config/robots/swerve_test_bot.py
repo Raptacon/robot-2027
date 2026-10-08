@@ -9,7 +9,7 @@ doc/swerve/calibration-log.md.
 """
 
 from config.module_presets import MK4I_L2, NOMINAL_WHEEL_RADIUS_M
-from config.robot_config import RobotConfig, square_corners
+from config.robot_config import RobotConfig, mirrored_corners
 
 # Plain Python on purpose: config imports no WPILib, so it loads on any RobotPy version.
 INCH = 0.0254
@@ -17,7 +17,7 @@ INCH = 0.0254
 CONFIG = RobotConfig(
     name="swerve_test_bot",
     preset=MK4I_L2,
-    corners=square_corners(
+    corners=mirrored_corners(
         x_m=10.39 * INCH,
         y_m=11.30 * INCH,
         first_can_id=50,
