@@ -130,9 +130,11 @@ subsystem/drivetrain/
   drivetrain_sim.py      # builds a sim drivetrain and tracks the true pose for tests
   odometry_sampler.py    # swappable: once per loop now, thread later
 commands/drive/
-  teleop_drive.py        # radial deadband, shaping, slew, field-relative, heading lock
+  teleop_drive.py        # field-relative per alliance, slow and robot-relative modes, heading snaps
+  stick_shaping.py       # radial deadband, curve, vector slew limit
   heading_lock.py
   x_lock.py
+  bindings.py            # connects the YAML driver actions to these commands
   characterization.py    # drive SysId, wheel radius, steer step test
   calibrate_offsets.py   # test-mode: prints CANcoder offsets as Python
 physics.py               # thin: steps the sim IO and BatterySim

@@ -212,3 +212,23 @@ class TestHealth:
         io.connected = False
         module.periodic(disabled=False)
         assert not module.healthy
+
+
+class TestSetAngle:
+    def test_points_the_wheel_without_rolling(self):
+        module, io, _ = seeded_module(0.0)
+        module.set_angle(0.8)
+        assert io.steer_target == pytest.approx(0.8)
+        assert io.drive_velocity == 0.0
+        assert module.setpoint == ModuleTarget(0.0, 0.8)
+
+    def test_takes_the_short_way(self):
+        module, io, _ = seeded_module(0.0)
+        module.set_angle(math.radians(135))
+        assert io.steer_target == pytest.approx(math.radians(-45))
+
+    def test_unseeded_module_stays_stopped(self):
+        module, io, _ = make_module(encoder_connected=False)
+        module.periodic(disabled=False)
+        module.set_angle(0.8)
+        assert io.drive_volts == 0.0 and io.steer_volts == 0.0
