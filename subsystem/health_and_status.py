@@ -26,8 +26,7 @@ class HealthAndStatus(commands2.Subsystem):
     """
 
     # Operator-adjustable update rate in seconds; 0 = every periodic call
-    updateRateSec = ntproperty(f"{_B}/updateRateSec", 0.5,
-                               writeDefault=False, persistent=True)
+    updateRateSec = ntproperty(f"{_B}/updateRateSec", 0.5, writeDefault=False, persistent=True)
 
     # -- PDP --
     pdp_voltage = ntproperty(f"{_B}/pdp/voltage", 0.0)
@@ -97,6 +96,7 @@ class HealthAndStatus(commands2.Subsystem):
     def __init__(self):
         super().__init__()
         import logging
+
         self._log = logging.getLogger(__name__)
 
         self._is_sim = wpilib.RobotBase.isSimulation()
@@ -126,8 +126,7 @@ class HealthAndStatus(commands2.Subsystem):
             nt = NetworkTableInstance.getDefault()
             pdp_table = nt.getTable("subsystems/HealthAndStatus/pdp")
             self._pdp_channels = [
-                pdp_table.getFloatTopic(f"channel{i}").publish()
-                for i in range(self.pdp.getNumChannels())
+                pdp_table.getFloatTopic(f"channel{i}").publish() for i in range(self.pdp.getNumChannels())
             ]
 
     def periodic(self):
@@ -150,10 +149,16 @@ class HealthAndStatus(commands2.Subsystem):
             self.pdp_total_current = self.pdp.getTotalCurrent()
             self.pdp_temperature = self.pdp.getTemperature()
             sf = self.pdp.getStickyFaults()
-            self.pdp_has_sticky_faults = any([
-                sf.Brownout, sf.CanBusOff, sf.CanWarning,
-                sf.HardwareFault, sf.FirmwareFault, sf.HasReset,
-            ])
+            self.pdp_has_sticky_faults = any(
+                [
+                    sf.Brownout,
+                    sf.CanBusOff,
+                    sf.CanWarning,
+                    sf.HardwareFault,
+                    sf.FirmwareFault,
+                    sf.HasReset,
+                ]
+            )
             for i, entry in enumerate(self._pdp_channels):
                 entry.set(self.pdp.getCurrent(i))
         except Exception as e:

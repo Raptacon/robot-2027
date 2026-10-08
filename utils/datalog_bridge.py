@@ -78,8 +78,7 @@ def setup_logging(default_level: int = logging.INFO) -> None:
 
     # Attach wpilog handler to root logger
     handler = _WPILogHandler()
-    handler.setFormatter(logging.Formatter(
-        "%(name)s [%(levelname)s] %(message)s"))
+    handler.setFormatter(logging.Formatter("%(name)s [%(levelname)s] %(message)s"))
     root = logging.getLogger()
     root.addHandler(handler)
     root.setLevel(default_level)
@@ -88,8 +87,7 @@ def setup_logging(default_level: int = logging.INFO) -> None:
     inst = ntcore.NetworkTableInstance.getDefault()
     topic = inst.getStringTopic("/robot/logLevel")
 
-    publisher = topic.publish(
-        ntcore.PubSubOptions(keepDuplicates=False))
+    publisher = topic.publish(ntcore.PubSubOptions(keepDuplicates=False))
     publisher.setDefault("INFO")
     inst.getTable("/robot").getEntry("logLevel").setPersistent()
 

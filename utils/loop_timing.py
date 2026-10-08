@@ -96,8 +96,7 @@ class LoopTimer:
         timer.publish()
     """
 
-    _STAT_NAMES = ("lastMs", "minMs", "maxMs", "avgMs", "stddevMs",
-                   "count", "budgetPct")
+    _STAT_NAMES = ("lastMs", "minMs", "maxMs", "avgMs", "stddevMs", "count", "budgetPct")
 
     def __init__(self, budget_sec: float, publish_period_sec: float = 0.1):
         self._budget_ms = budget_sec * 1000.0
@@ -105,29 +104,18 @@ class LoopTimer:
         self._last_publish = -math.inf
         self._channels: dict[str, LoopTimingStats] = {}
         self._starts: dict[str, float] = {}
-        self._table = ntcore.NetworkTableInstance.getDefault().getTable(
-            "FrameTiming")
+        self._table = ntcore.NetworkTableInstance.getDefault().getTable("FrameTiming")
         self._channel_pubs: dict[str, dict[str, ntcore.DoublePublisher]] = {}
         self._total_ms_pub = self._table.getDoubleTopic("totalMs").publish()
-        self._total_pct_pub = self._table.getDoubleTopic(
-            "totalBudgetPct").publish()
-        self._alert_info = wpilib.Alert(
-            "Frame Timing", wpilib.Alert.AlertType.kInfo
-        )
-        self._alert_warning = wpilib.Alert(
-            "Frame Timing", wpilib.Alert.AlertType.kWarning
-        )
-        self._alert_error = wpilib.Alert(
-            "Frame Timing", wpilib.Alert.AlertType.kError
-        )
+        self._total_pct_pub = self._table.getDoubleTopic("totalBudgetPct").publish()
+        self._alert_info = wpilib.Alert("Frame Timing", wpilib.Alert.AlertType.kInfo)
+        self._alert_warning = wpilib.Alert("Frame Timing", wpilib.Alert.AlertType.kWarning)
+        self._alert_error = wpilib.Alert("Frame Timing", wpilib.Alert.AlertType.kError)
 
     def add_channel(self, name: str):
         self._channels[name] = LoopTimingStats()
         sub = self._table.getSubTable(name)
-        self._channel_pubs[name] = {
-            stat: sub.getDoubleTopic(stat).publish()
-            for stat in self._STAT_NAMES
-        }
+        self._channel_pubs[name] = {stat: sub.getDoubleTopic(stat).publish() for stat in self._STAT_NAMES}
 
     def start(self, name: str):
         self._starts[name] = wpilib.Timer.getFPGATimestamp()
@@ -164,17 +152,11 @@ class LoopTimer:
         self._alert_info.set(info)
 
         if overrun:
-            self._alert_error.setText(
-                f"Frame Timing: OVERRUN {total_pct:.0f}% ({total_ms:.1f}ms)"
-            )
+            self._alert_error.setText(f"Frame Timing: OVERRUN {total_pct:.0f}% ({total_ms:.1f}ms)")
         elif warning:
-            self._alert_warning.setText(
-                f"Frame Timing: {total_pct:.0f}% - possible overrun"
-            )
+            self._alert_warning.setText(f"Frame Timing: {total_pct:.0f}% - possible overrun")
         else:
-            self._alert_info.setText(
-                f"Frame Timing: {total_pct:.0f}%"
-            )
+            self._alert_info.setText(f"Frame Timing: {total_pct:.0f}%")
 
     def _publish_nt(self, total_ms: float, total_pct: float):
         for name, stats in self._channels.items():
@@ -186,8 +168,7 @@ class LoopTimer:
             pubs["stddevMs"].set(stats.stddev_ms)
             pubs["count"].set(stats.count)
             if self._budget_ms > 0:
-                pubs["budgetPct"].set(
-                    (stats.last_ms / self._budget_ms) * 100.0)
+                pubs["budgetPct"].set((stats.last_ms / self._budget_ms) * 100.0)
         self._total_ms_pub.set(total_ms)
         if self._budget_ms > 0:
             self._total_pct_pub.set(total_pct)

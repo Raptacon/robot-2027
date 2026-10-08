@@ -24,6 +24,7 @@ INCHES_TO_METERS = 0.0254
 
 # ── Transform builders ───────────────────────────────────────────────
 
+
 def inches_to_meters(inches: float) -> float:
     return inches * INCHES_TO_METERS
 
@@ -77,6 +78,7 @@ def chain_transforms(*transforms: Transform3d) -> Transform3d:
 
 # ── Camera geometry ──────────────────────────────────────────────────
 
+
 class CameraGeometry:
     """A vision camera on the robot.
 
@@ -84,9 +86,17 @@ class CameraGeometry:
     values for display, serialization, and the visualizer.
     """
 
-    __slots__ = ('name', 'robot_to_camera', 'fov_deg',
-                 '_x_in', '_y_in', '_z_in',
-                 '_roll_deg', '_pitch_up_deg', '_yaw_deg')
+    __slots__ = (
+        "name",
+        "robot_to_camera",
+        "fov_deg",
+        "_x_in",
+        "_y_in",
+        "_z_in",
+        "_roll_deg",
+        "_pitch_up_deg",
+        "_yaw_deg",
+    )
 
     def __init__(
         self,
@@ -94,8 +104,12 @@ class CameraGeometry:
         robot_to_camera: Transform3d,
         fov_deg: float = 70.0,
         *,
-        x_in: float = 0, y_in: float = 0, z_in: float = 0,
-        roll_deg: float = 0, pitch_up_deg: float = 0, yaw_deg: float = 0,
+        x_in: float = 0,
+        y_in: float = 0,
+        z_in: float = 0,
+        roll_deg: float = 0,
+        pitch_up_deg: float = 0,
+        yaw_deg: float = 0,
     ):
         self.name = name
         self.robot_to_camera = robot_to_camera
@@ -141,17 +155,22 @@ def make_camera(
     fov_deg: float = 70.0,
 ) -> CameraGeometry:
     """Create a CameraGeometry from inches and intuitive degrees."""
-    tf = transform_from_inches(
-        x_in, y_in, z_in, roll_deg, pitch_up_deg, yaw_deg
-    )
+    tf = transform_from_inches(x_in, y_in, z_in, roll_deg, pitch_up_deg, yaw_deg)
     return CameraGeometry(
-        name, tf, fov_deg,
-        x_in=x_in, y_in=y_in, z_in=z_in,
-        roll_deg=roll_deg, pitch_up_deg=pitch_up_deg, yaw_deg=yaw_deg,
+        name,
+        tf,
+        fov_deg,
+        x_in=x_in,
+        y_in=y_in,
+        z_in=z_in,
+        roll_deg=roll_deg,
+        pitch_up_deg=pitch_up_deg,
+        yaw_deg=yaw_deg,
     )
 
 
 # ── Mechanism mount ──────────────────────────────────────────────────
+
 
 class MechanismMount:
     """A physical mechanism on the robot.
@@ -172,8 +191,17 @@ class MechanismMount:
         hood's robot_to_mechanism = robot_to_turret + turret_to_hood
     """
 
-    __slots__ = ('name', 'type', 'local_transform', 'robot_to_mechanism',
-                 'parent_name', 'width_m', 'length_m', 'radius_m', 'color')
+    __slots__ = (
+        "name",
+        "type",
+        "local_transform",
+        "robot_to_mechanism",
+        "parent_name",
+        "width_m",
+        "length_m",
+        "radius_m",
+        "color",
+    )
 
     def __init__(
         self,
@@ -195,9 +223,7 @@ class MechanismMount:
 
         # Resolve absolute transform from robot center
         if parent_transform is not None:
-            self.robot_to_mechanism = chain_transforms(
-                parent_transform, local_transform
-            )
+            self.robot_to_mechanism = chain_transforms(parent_transform, local_transform)
         else:
             self.robot_to_mechanism = local_transform
 

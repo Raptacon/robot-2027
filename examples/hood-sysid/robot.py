@@ -24,10 +24,7 @@ class MyRobot(TimedCommandRobot):
 
     def robotInit(self):
         # Create adjustable release motor and subsystem
-        self.hood_motor = rev.SparkMax(
-            MOTOR_CAN_ID,
-            rev.SparkLowLevel.MotorType.kBrushless
-        )
+        self.hood_motor = rev.SparkMax(MOTOR_CAN_ID, rev.SparkLowLevel.MotorType.kBrushless)
         self.hood = Hood(
             motor=self.hood_motor,
             position_conversion_factor=POSITION_CONVERSION_FACTOR,
@@ -43,55 +40,28 @@ class MyRobot(TimedCommandRobot):
         # Setup SysId routine
         # Config: ramp rate 0.2 V/s, step voltage 4V, timeout 30s
         sysIdConfig = SysIdRoutine.Config(0.1, 1, 30.0, None)
-        sysIdMechanism = SysIdRoutine.Mechanism(
-            self.hood._setMotorVoltage,
-            self.hood._sysIdLog,
-            self.hood,
-            "hood"
-        )
+        sysIdMechanism = SysIdRoutine.Mechanism(self.hood._setMotorVoltage, self.hood._sysIdLog, self.hood, "hood")
         self.sysId = SysIdRoutine(sysIdConfig, sysIdMechanism)
 
     def teleopInit(self) -> None:
         self.controller = CommandXboxController(0)
 
         # A/B: Quasistatic forward/reverse
-        self.controller.a().whileTrue(
-            self.hood._sysIdQuasistaticCommand(
-                SysIdRoutine.Direction.kForward, self.sysId
-            )
-        )
-        self.controller.b().whileTrue(
-            self.hood._sysIdQuasistaticCommand(
-                SysIdRoutine.Direction.kReverse, self.sysId
-            )
-        )
+        self.controller.a().whileTrue(self.hood._sysIdQuasistaticCommand(SysIdRoutine.Direction.kForward, self.sysId))
+        self.controller.b().whileTrue(self.hood._sysIdQuasistaticCommand(SysIdRoutine.Direction.kReverse, self.sysId))
 
         # X/Y: Dynamic forward/reverse
-        self.controller.x().whileTrue(
-            self.hood._sysIdDynamicCommand(
-                SysIdRoutine.Direction.kForward, self.sysId
-            )
-        )
-        self.controller.y().whileTrue(
-            self.hood._sysIdDynamicCommand(
-                SysIdRoutine.Direction.kReverse, self.sysId
-            )
-        )
+        self.controller.x().whileTrue(self.hood._sysIdDynamicCommand(SysIdRoutine.Direction.kForward, self.sysId))
+        self.controller.y().whileTrue(self.hood._sysIdDynamicCommand(SysIdRoutine.Direction.kReverse, self.sysId))
 
         # Start button: manual position control with right trigger
-        self.controller.start().toggleOnTrue(
-            self.hood.manualTestCommand(
-                self.controller.getRightTriggerAxis)
-        )
+        self.controller.start().toggleOnTrue(self.hood.manualTestCommand(self.controller.getRightTriggerAxis))
 
         # Back button: toggle passive range finder (start/stop)
         self.controller.back().toggleOnTrue(
             PassiveRangeFinderCommand(
-                self.hood_motor,
-                "AdjustableRelease",
-                self.hood,
-                zero_on_end=True,
-                full_range=MAX_ANGLE_DEGREES)
+                self.hood_motor, "AdjustableRelease", self.hood, zero_on_end=True, full_range=MAX_ANGLE_DEGREES
+            )
         )
 
     def teleopPeriodic(self):
@@ -102,21 +72,9 @@ class MyRobot(TimedCommandRobot):
         self.controller = CommandXboxController(0)
 
         # Test mode: manual position control
-        self.controller.a().onTrue(
-            commands2.cmd.run(
-                lambda: self.hood.setAngleDegrees(0.0),
-                self.hood)
-        )
-        self.controller.b().onTrue(
-            commands2.cmd.run(
-                lambda: self.hood.setAngleDegrees(15.0),
-                self.hood)
-        )
-        self.controller.x().onTrue(
-            commands2.cmd.run(
-                lambda: self.hood.setAngleDegrees(30.0),
-                self.hood)
-        )
+        self.controller.a().onTrue(commands2.cmd.run(lambda: self.hood.setAngleDegrees(0.0), self.hood))
+        self.controller.b().onTrue(commands2.cmd.run(lambda: self.hood.setAngleDegrees(15.0), self.hood))
+        self.controller.x().onTrue(commands2.cmd.run(lambda: self.hood.setAngleDegrees(30.0), self.hood))
 
     def testPeriodic(self):
         super().testPeriodic()

@@ -15,7 +15,9 @@ for milestones.
 make                        # create a venv and install requirements
 python -m robotpy test      # run the tests
 python -m robotpy sim       # run the simulator
-make lint                   # flake8, same rules as CI
+pre-commit install          # once per clone: ruff runs on every commit
+make lint                   # ruff lint + format check, same as CI
+make format                 # auto-fix lint and format
 ```
 
 Deploy with `make deploy` (or `python -m robotpy deploy`) while connected to

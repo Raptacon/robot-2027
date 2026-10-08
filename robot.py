@@ -22,6 +22,7 @@ class MyRobot(commands2.TimedCommandRobot):
     timing and health telemetry; the swerve drivetrain is added on the
     swerve-dev branch.
     """
+
     # 20 ms default period (50 Hz)
     kDefaultPeriod: typing.ClassVar[float] = 20.0
     autonomousCommand: typing.Optional[commands2.Command] = None
@@ -62,6 +63,7 @@ class MyRobot(commands2.TimedCommandRobot):
 
         # REV status logging (.revlog files)
         from rev import StatusLogger
+
         StatusLogger.start()
 
     def robotPeriodic(self) -> None:

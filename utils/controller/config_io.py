@@ -58,8 +58,7 @@ def _action_to_dict(action: ActionDefinition) -> dict:
         d["trigger_mode"] = action.trigger_mode.value
 
     # Shaping fields only matter for non-RAW analog modes
-    uses_shaping = (action.trigger_mode in ANALOG_EVENT_TRIGGER_MODES
-                    and action.trigger_mode != EventTriggerMode.RAW)
+    uses_shaping = action.trigger_mode in ANALOG_EVENT_TRIGGER_MODES and action.trigger_mode != EventTriggerMode.RAW
     if uses_shaping:
         if action.deadband != _ACTION_DEFAULTS.deadband:
             d["deadband"] = action.deadband
@@ -119,11 +118,7 @@ def _controller_to_dict(ctrl: ControllerConfig) -> dict:
     if ctrl.controller_type != DEFAULT_CONTROLLER_TYPE:
         d["controller_type"] = ctrl.controller_type
     if ctrl.bindings:
-        d["bindings"] = {
-            input_name: list(actions)
-            for input_name, actions in ctrl.bindings.items()
-            if actions
-        }
+        d["bindings"] = {input_name: list(actions) for input_name, actions in ctrl.bindings.items() if actions}
     return d
 
 
@@ -147,8 +142,7 @@ def _dict_to_controller(port: int, d: dict) -> ControllerConfig:
     )
 
 
-def _load_actions_dict(actions_data: dict
-                       ) -> tuple[dict[str, ActionDefinition], set[str]]:
+def _load_actions_dict(actions_data: dict) -> tuple[dict[str, ActionDefinition], set[str]]:
     """Load actions from nested (grouped) YAML format.
 
     Expected format::
@@ -173,15 +167,13 @@ def _load_actions_dict(actions_data: dict
             empty_groups.add(group_name)
             continue
         for action_name, action_dict in group_actions.items():
-            action = _dict_to_action(
-                str(action_name), action_dict, group=group_name)
+            action = _dict_to_action(str(action_name), action_dict, group=group_name)
             actions[action.qualified_name] = action
 
     return actions, empty_groups
 
 
-def _actions_to_nested_dict(actions: dict[str, ActionDefinition],
-                            empty_groups: set[str] | None = None) -> dict:
+def _actions_to_nested_dict(actions: dict[str, ActionDefinition], empty_groups: set[str] | None = None) -> dict:
     """Group actions by group and serialize to nested dict.
 
     Empty groups are preserved as empty dicts so they round-trip
@@ -201,6 +193,7 @@ def _actions_to_nested_dict(actions: dict[str, ActionDefinition],
 
 # --- Helpers ---
 
+
 def _dump_yaml(path: str | Path, data: dict) -> None:
     """Write a data dict as YAML, creating parent directories if needed."""
     path = Path(path)
@@ -211,6 +204,7 @@ def _dump_yaml(path: str | Path, data: dict) -> None:
 
 # --- Public API ---
 
+
 def save_config(config: FullConfig, path: str | Path) -> None:
     """Save a FullConfig to a YAML file (nested action format)."""
     data = {}
@@ -218,14 +212,10 @@ def save_config(config: FullConfig, path: str | Path) -> None:
     data["version"] = config.version or CONFIG_VERSION
 
     if config.actions or config.empty_groups:
-        data["actions"] = _actions_to_nested_dict(
-            config.actions, config.empty_groups)
+        data["actions"] = _actions_to_nested_dict(config.actions, config.empty_groups)
 
     if config.controllers:
-        data["controllers"] = {
-            port: _controller_to_dict(ctrl)
-            for port, ctrl in config.controllers.items()
-        }
+        data["controllers"] = {port: _controller_to_dict(ctrl) for port, ctrl in config.controllers.items()}
 
     _dump_yaml(path, data)
 
@@ -241,14 +231,10 @@ def load_config(path: str | Path) -> FullConfig:
 
     version = data.get("version", "")
     if not version:
-        log.warning(
-            "Config file '%s' has no version field — assuming %s",
-            path, CONFIG_VERSION)
+        log.warning("Config file '%s' has no version field — assuming %s", path, CONFIG_VERSION)
         version = CONFIG_VERSION
     elif version != CONFIG_VERSION:
-        log.warning(
-            "Config file '%s' version '%s' does not match "
-            "expected '%s'", path, version, CONFIG_VERSION)
+        log.warning("Config file '%s' version '%s' does not match expected '%s'", path, version, CONFIG_VERSION)
 
     actions, empty_groups = _load_actions_dict(data.get("actions") or {})
 
@@ -257,8 +243,7 @@ def load_config(path: str | Path) -> FullConfig:
         port = int(port)
         controllers[port] = _dict_to_controller(port, ctrl_dict)
 
-    return FullConfig(actions=actions, controllers=controllers,
-                      empty_groups=empty_groups, version=version)
+    return FullConfig(actions=actions, controllers=controllers, empty_groups=empty_groups, version=version)
 
 
 def load_actions_from_file(path: str | Path) -> dict[str, ActionDefinition]:
@@ -274,20 +259,15 @@ def load_actions_from_file(path: str | Path) -> dict[str, ActionDefinition]:
 
     version = data.get("version", "")
     if not version:
-        log.warning(
-            "Config file '%s' has no version field — assuming %s",
-            path, CONFIG_VERSION)
+        log.warning("Config file '%s' has no version field — assuming %s", path, CONFIG_VERSION)
     elif version != CONFIG_VERSION:
-        log.warning(
-            "Config file '%s' version '%s' does not match "
-            "expected '%s'", path, version, CONFIG_VERSION)
+        log.warning("Config file '%s' version '%s' does not match expected '%s'", path, version, CONFIG_VERSION)
 
     actions, _empty = _load_actions_dict(data.get("actions") or {})
     return actions
 
 
-def save_actions_to_file(actions: dict[str, ActionDefinition],
-                         path: str | Path) -> None:
+def save_actions_to_file(actions: dict[str, ActionDefinition], path: str | Path) -> None:
     """Save actions to a YAML file (actions section only, no controllers)."""
     data = {}
     if actions:
@@ -296,15 +276,11 @@ def save_actions_to_file(actions: dict[str, ActionDefinition],
     _dump_yaml(path, data)
 
 
-def save_assignments_to_file(controllers: dict[int, ControllerConfig],
-                             path: str | Path) -> None:
+def save_assignments_to_file(controllers: dict[int, ControllerConfig], path: str | Path) -> None:
     """Save controller assignments to a YAML file (controllers only, no actions)."""
     data = {}
     if controllers:
-        data["controllers"] = {
-            port: _controller_to_dict(ctrl)
-            for port, ctrl in controllers.items()
-        }
+        data["controllers"] = {port: _controller_to_dict(ctrl) for port, ctrl in controllers.items()}
 
     _dump_yaml(path, data)
 

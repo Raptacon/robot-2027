@@ -51,6 +51,7 @@ class EventTriggerMode(Enum):
     Analog modes control how the analog value is shaped/curved before
     it reaches the subsystem.
     """
+
     # Button modes
     ON_TRUE = "on_true"
     ON_FALSE = "on_false"
@@ -89,6 +90,7 @@ class InputType(Enum):
     boolean using a threshold comparison — not related to
     ``commands2.button.Trigger``.
     """
+
     BUTTON = "button"
     ANALOG = "analog"
     OUTPUT = "output"
@@ -107,13 +109,14 @@ class ActionDefinition:
     Actions belong to a group (default "general"). The fully qualified name
     is ``group.name`` (e.g. ``intake.run``, ``shooter.fire``).
     """
+
     name: str
     description: str = ""
     group: str = DEFAULT_GROUP
     input_type: InputType = InputType.BUTTON
     trigger_mode: EventTriggerMode = EventTriggerMode.ON_TRUE
     deadband: float = 0.0
-    threshold: float = 0.5     # For BOOLEAN_TRIGGER: axis > threshold = True
+    threshold: float = 0.5  # For BOOLEAN_TRIGGER: axis > threshold = True
     inversion: bool = False
     slew_rate: float = 0.0  # Max output change rate (units/sec), 0 = disabled.
     # Symmetric by default. For asymmetric, set
@@ -132,8 +135,8 @@ def parse_qualified_name(qualified: str) -> tuple[str, str]:
 
     If there is no dot, returns ('general', qualified).
     """
-    if '.' in qualified:
-        group, _, name = qualified.partition('.')
+    if "." in qualified:
+        group, _, name = qualified.partition(".")
         return group, name
     return DEFAULT_GROUP, qualified
 
@@ -145,7 +148,7 @@ def validate_action_name(name: str) -> str | None:
     """
     if not name:
         return "Name cannot be empty."
-    if '.' in name:
+    if "." in name:
         return "Name cannot contain dots."
     return None
 
@@ -160,9 +163,7 @@ def validate_action_group(group: str) -> str | None:
     return None
 
 
-def validate_action_rename(old_qname: str, new_qname: str,
-                           actions: dict[str, 'ActionDefinition']
-                           ) -> str | None:
+def validate_action_rename(old_qname: str, new_qname: str, actions: dict[str, "ActionDefinition"]) -> str | None:
     """Validate renaming an action from old_qname to new_qname.
 
     Checks name, group, and duplicate constraints.
@@ -185,6 +186,7 @@ def validate_action_rename(old_qname: str, new_qname: str,
 @dataclass
 class ControllerConfig:
     """Configuration for a single controller (port + bindings)."""
+
     port: int
     name: str = ""
     controller_type: str = DEFAULT_CONTROLLER_TYPE
@@ -194,6 +196,7 @@ class ControllerConfig:
 @dataclass
 class FullConfig:
     """Top-level configuration: action definitions + controller bindings."""
+
     actions: dict[str, ActionDefinition] = field(default_factory=dict)
     controllers: dict[int, ControllerConfig] = field(default_factory=dict)
     empty_groups: set[str] = field(default_factory=set)

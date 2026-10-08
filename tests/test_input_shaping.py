@@ -30,6 +30,7 @@ from utils.controller.model import EventTriggerMode
 
 # --- Helpers ---
 
+
 def approx(a, b, tol=1e-6):
     """Assert two floats are approximately equal."""
     assert abs(a - b) < tol, f"{a} != {b} (tol={tol})"
@@ -37,8 +38,8 @@ def approx(a, b, tol=1e-6):
 
 # --- Curve Squared ---
 
-class TestCurveSquared:
 
+class TestCurveSquared:
     def test_positive(self):
         approx(curve_squared(0.5), 0.25)
 
@@ -57,8 +58,8 @@ class TestCurveSquared:
 
 # --- Hermite Eval ---
 
-class TestHermiteEval:
 
+class TestHermiteEval:
     def test_linear_segment(self):
         """y = x over [0, 1] with slope 1 at both ends."""
         approx(hermite_eval(0.0, 1.0, 1.0, 1.0, 1.0, 0.0), 0.0)
@@ -73,8 +74,8 @@ class TestHermiteEval:
 
 # --- Spline Evaluation ---
 
-class TestSplineEvaluation:
 
+class TestSplineEvaluation:
     def test_default_spline_is_linear(self):
         """Default 3-point spline (y=x) should return x for all inputs."""
         pts = default_spline_points()
@@ -115,8 +116,8 @@ class TestSplineEvaluation:
 
 # --- Segment Evaluation ---
 
-class TestSegmentEvaluation:
 
+class TestSegmentEvaluation:
     def test_default_segments_linear(self):
         """Default 3-point segments (y=x) should be linear."""
         pts = default_segment_points()
@@ -154,8 +155,8 @@ class TestSegmentEvaluation:
 
 # --- Deadband ---
 
-class TestDeadband:
 
+class TestDeadband:
     def test_inside_deadband(self):
         assert apply_deadband(0.05, 0.1) == 0.0
         assert apply_deadband(-0.05, 0.1) == 0.0
@@ -176,74 +177,76 @@ class TestDeadband:
 
 # --- Shaping Pipeline ---
 
-class TestShaperPipeline:
 
+class TestShaperPipeline:
     def test_raw_passthrough(self):
         """RAW mode: true passthrough, no shaping applied."""
         pipeline = build_shaping_pipeline(
-            inversion=False, deadband=0.0,
-            trigger_mode=EventTriggerMode.RAW, scale=1.0, extra={})
+            inversion=False, deadband=0.0, trigger_mode=EventTriggerMode.RAW, scale=1.0, extra={}
+        )
         approx(pipeline(0.5), 0.5)
         approx(pipeline(-0.5), -0.5)
 
     def test_raw_ignores_all_shaping(self):
         """RAW mode ignores inversion, deadband, and scale."""
         pipeline = build_shaping_pipeline(
-            inversion=True, deadband=0.1,
-            trigger_mode=EventTriggerMode.RAW, scale=5.5, extra={})
+            inversion=True, deadband=0.1, trigger_mode=EventTriggerMode.RAW, scale=5.5, extra={}
+        )
         # RAW returns the raw value regardless of params
         approx(pipeline(0.5), 0.5)
         approx(pipeline(-0.3), -0.3)
 
     def test_scaled_with_scale(self):
         pipeline = build_shaping_pipeline(
-            inversion=False, deadband=0.0,
-            trigger_mode=EventTriggerMode.SCALED, scale=5.5, extra={})
+            inversion=False, deadband=0.0, trigger_mode=EventTriggerMode.SCALED, scale=5.5, extra={}
+        )
         approx(pipeline(1.0), 5.5)
 
     def test_inversion(self):
         pipeline = build_shaping_pipeline(
-            inversion=True, deadband=0.0,
-            trigger_mode=EventTriggerMode.SCALED, scale=1.0, extra={})
+            inversion=True, deadband=0.0, trigger_mode=EventTriggerMode.SCALED, scale=1.0, extra={}
+        )
         approx(pipeline(0.5), -0.5)
 
     def test_scaled_mode(self):
         pipeline = build_shaping_pipeline(
-            inversion=False, deadband=0.1,
-            trigger_mode=EventTriggerMode.SCALED, scale=12.0, extra={})
+            inversion=False, deadband=0.1, trigger_mode=EventTriggerMode.SCALED, scale=12.0, extra={}
+        )
         # 0.55 -> deadband(0.55, 0.1) = 0.5 -> * 12.0 = 6.0
         approx(pipeline(0.55), 6.0, tol=0.1)
 
     def test_squared_mode(self):
         pipeline = build_shaping_pipeline(
-            inversion=False, deadband=0.0,
-            trigger_mode=EventTriggerMode.SQUARED, scale=1.0, extra={})
+            inversion=False, deadband=0.0, trigger_mode=EventTriggerMode.SQUARED, scale=1.0, extra={}
+        )
         approx(pipeline(0.5), 0.25)
         approx(pipeline(-0.5), -0.25)
 
     def test_spline_mode(self):
         pts = default_spline_points()
         pipeline = build_shaping_pipeline(
-            inversion=False, deadband=0.0,
-            trigger_mode=EventTriggerMode.SPLINE, scale=1.0,
-            extra={"spline_points": pts})
+            inversion=False, deadband=0.0, trigger_mode=EventTriggerMode.SPLINE, scale=1.0, extra={"spline_points": pts}
+        )
         # Default spline is y=x
         approx(pipeline(0.5), 0.5, tol=1e-3)
 
     def test_segmented_mode(self):
         pts = default_segment_points()
         pipeline = build_shaping_pipeline(
-            inversion=False, deadband=0.0,
-            trigger_mode=EventTriggerMode.SEGMENTED, scale=1.0,
-            extra={"segment_points": pts})
+            inversion=False,
+            deadband=0.0,
+            trigger_mode=EventTriggerMode.SEGMENTED,
+            scale=1.0,
+            extra={"segment_points": pts},
+        )
         # Default segments are y=x
         approx(pipeline(0.5), 0.5, tol=1e-3)
 
     def test_full_pipeline_inversion_deadband_squared_scale(self):
         """Full pipeline: invert -> deadband -> squared -> scale."""
         pipeline = build_shaping_pipeline(
-            inversion=True, deadband=0.05,
-            trigger_mode=EventTriggerMode.SQUARED, scale=2.0, extra={})
+            inversion=True, deadband=0.05, trigger_mode=EventTriggerMode.SQUARED, scale=2.0, extra={}
+        )
         # Input 0.5 -> inverted = -0.5
         # -> deadband(-0.5, 0.05) ≈ -0.4737
         # -> squared ≈ -0.2244

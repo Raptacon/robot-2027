@@ -58,8 +58,7 @@ class ManagedRumble:
 
     def update(self) -> None:
         """Check timeouts — call once per robot cycle."""
-        if (self._stop_time is not None
-                and time.monotonic() >= self._stop_time):
+        if self._stop_time is not None and time.monotonic() >= self._stop_time:
             self.stop()
 
     def __str__(self) -> str:

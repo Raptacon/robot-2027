@@ -45,6 +45,7 @@ from utils.controller.model import (
 # Try to import wpilib.Timer for FPGA time; None if unavailable
 try:
     import wpilib
+
     _get_time = wpilib.Timer.getFPGATimestamp
 except ImportError:
     _get_time = None
@@ -74,23 +75,19 @@ class VirtualAnalogGenerator:
         self._ramp_rate = float(extra.get(EXTRA_VA_RAMP_RATE, 0.0))
         self._acceleration = float(extra.get(EXTRA_VA_ACCELERATION, 0.0))
         if self._ramp_rate > 0 and self._acceleration > 0:
-            name = getattr(action, 'name', '?')
+            name = getattr(action, "name", "?")
             warnings.warn(
                 f"VA action '{name}': both ramp_rate and acceleration set. "
                 f"Using ramp_rate ({self._ramp_rate}), ignoring acceleration."
             )
         neg_ramp = extra.get(EXTRA_VA_NEGATIVE_RAMP_RATE)
-        self._negative_ramp_rate = (
-            float(neg_ramp) if neg_ramp is not None else self._ramp_rate)
+        self._negative_ramp_rate = float(neg_ramp) if neg_ramp is not None else self._ramp_rate
         neg_accel = extra.get(EXTRA_VA_NEGATIVE_ACCELERATION)
-        self._negative_acceleration = (
-            float(neg_accel) if neg_accel is not None else self._acceleration)
-        self._zero_vel_on_release = bool(
-            extra.get(EXTRA_VA_ZERO_VEL_ON_RELEASE, False))
+        self._negative_acceleration = float(neg_accel) if neg_accel is not None else self._acceleration
+        self._zero_vel_on_release = bool(extra.get(EXTRA_VA_ZERO_VEL_ON_RELEASE, False))
         self._target_value = float(extra.get(EXTRA_VA_TARGET_VALUE, 1.0))
         self._rest_value = float(extra.get(EXTRA_VA_REST_VALUE, 0.0))
-        self._toggle_mode = (
-            extra.get(EXTRA_VA_BUTTON_MODE, "held") == "toggle")
+        self._toggle_mode = extra.get(EXTRA_VA_BUTTON_MODE, "held") == "toggle"
 
         # Clamp bounds
         self._min_val = min(self._rest_value, self._target_value)
@@ -195,8 +192,7 @@ class VirtualAnalogGenerator:
 
         # Don't overshoot target
         new_diff = target - self._position
-        if (direction > 0 and new_diff < 0) or \
-           (direction < 0 and new_diff > 0):
+        if (direction > 0 and new_diff < 0) or (direction < 0 and new_diff > 0):
             self._position = target
             self._velocity = 0.0
 
@@ -216,6 +212,7 @@ class VirtualAnalogGenerator:
 # ---------------------------------------------------------------------------
 # Pure-Python simulation for GUI visualization (no wpilib dependency)
 # ---------------------------------------------------------------------------
+
 
 def simulate_va_ramp(
     ramp_rate: float = 0.0,
@@ -237,8 +234,7 @@ def simulate_va_ramp(
     Pure Python — no wpilib dependency.
     """
     neg_ramp = negative_ramp_rate if negative_ramp_rate is not None else ramp_rate
-    neg_accel = (negative_acceleration if negative_acceleration is not None
-                 else acceleration)
+    neg_accel = negative_acceleration if negative_acceleration is not None else acceleration
     min_val = min(rest_value, target_value)
     max_val = max(rest_value, target_value)
 
@@ -286,8 +282,7 @@ def simulate_va_ramp(
             position += velocity * dt
             # Don't overshoot
             new_diff = target - position
-            if (direction > 0 and new_diff < 0) or \
-               (direction < 0 and new_diff > 0):
+            if (direction > 0 and new_diff < 0) or (direction < 0 and new_diff > 0):
                 position = target
                 velocity = 0.0
 

@@ -5,6 +5,7 @@ Forces process exit after test session completes to work around
 photonlibpy's TimeSyncServer creating non-daemon threads that
 prevent the process from exiting cleanly on Windows CI.
 """
+
 import atexit
 import os
 import sys

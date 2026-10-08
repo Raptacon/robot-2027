@@ -29,6 +29,7 @@ from utils.math.curves import default_spline_points, default_segment_points
 
 # --- Helpers ---
 
+
 def _make_action(
     name="test_action",
     group="test",
@@ -58,25 +59,25 @@ def _make_action(
 
 # --- ShapingPipeline __str__ ---
 
-class TestShapingPipelineStr:
 
+class TestShapingPipelineStr:
     def test_raw_passthrough(self):
         p = build_shaping_pipeline(
-            inversion=False, deadband=0.0,
-            trigger_mode=EventTriggerMode.RAW, scale=1.0, extra={})
+            inversion=False, deadband=0.0, trigger_mode=EventTriggerMode.RAW, scale=1.0, extra={}
+        )
         assert isinstance(p, ShapingPipeline)
         assert str(p) == "raw passthrough"
 
     def test_scaled_no_transforms(self):
         p = build_shaping_pipeline(
-            inversion=False, deadband=0.0,
-            trigger_mode=EventTriggerMode.SCALED, scale=1.0, extra={})
+            inversion=False, deadband=0.0, trigger_mode=EventTriggerMode.SCALED, scale=1.0, extra={}
+        )
         assert str(p) == "scaled"
 
     def test_scaled_with_all_stages(self):
         p = build_shaping_pipeline(
-            inversion=True, deadband=0.1,
-            trigger_mode=EventTriggerMode.SCALED, scale=2.0, extra={})
+            inversion=True, deadband=0.1, trigger_mode=EventTriggerMode.SCALED, scale=2.0, extra={}
+        )
         s = str(p)
         assert "invert" in s
         assert "deadband(0.1)" in s
@@ -84,8 +85,8 @@ class TestShapingPipelineStr:
 
     def test_squared_mode(self):
         p = build_shaping_pipeline(
-            inversion=False, deadband=0.05,
-            trigger_mode=EventTriggerMode.SQUARED, scale=1.0, extra={})
+            inversion=False, deadband=0.05, trigger_mode=EventTriggerMode.SQUARED, scale=1.0, extra={}
+        )
         s = str(p)
         assert "deadband(0.05)" in s
         assert "squared" in s
@@ -93,9 +94,8 @@ class TestShapingPipelineStr:
     def test_spline_mode(self):
         pts = default_spline_points()
         p = build_shaping_pipeline(
-            inversion=False, deadband=0.0,
-            trigger_mode=EventTriggerMode.SPLINE, scale=1.0,
-            extra={"spline_points": pts})
+            inversion=False, deadband=0.0, trigger_mode=EventTriggerMode.SPLINE, scale=1.0, extra={"spline_points": pts}
+        )
         s = str(p)
         assert "spline(" in s
         assert "pts)" in s
@@ -103,9 +103,12 @@ class TestShapingPipelineStr:
     def test_segmented_mode(self):
         pts = default_segment_points()
         p = build_shaping_pipeline(
-            inversion=False, deadband=0.0,
-            trigger_mode=EventTriggerMode.SEGMENTED, scale=1.0,
-            extra={"segment_points": pts})
+            inversion=False,
+            deadband=0.0,
+            trigger_mode=EventTriggerMode.SEGMENTED,
+            scale=1.0,
+            extra={"segment_points": pts},
+        )
         s = str(p)
         assert "segments(" in s
         assert "pts)" in s
@@ -113,18 +116,17 @@ class TestShapingPipelineStr:
     def test_callable(self):
         """ShapingPipeline should still work as a callable."""
         p = build_shaping_pipeline(
-            inversion=False, deadband=0.0,
-            trigger_mode=EventTriggerMode.SCALED, scale=2.0, extra={})
+            inversion=False, deadband=0.0, trigger_mode=EventTriggerMode.SCALED, scale=2.0, extra={}
+        )
         assert p(0.5) == 1.0
 
 
 # --- ManagedAnalog __str__ ---
 
-class TestManagedAnalogStr:
 
+class TestManagedAnalogStr:
     def test_basic_str(self):
-        action = _make_action(trigger_mode=EventTriggerMode.SCALED,
-                              deadband=0.1, scale=2.0)
+        action = _make_action(trigger_mode=EventTriggerMode.SCALED, deadband=0.1, scale=2.0)
         analog = ManagedAnalog(action, lambda: 0.0)
         s = str(analog)
         assert "ManagedAnalog(" in s
@@ -164,11 +166,10 @@ class TestManagedAnalogStr:
 
 # --- ManagedButton __str__ ---
 
-class TestManagedButtonStr:
 
+class TestManagedButtonStr:
     def test_basic_str(self):
-        action = _make_action(input_type=InputType.BUTTON,
-                              trigger_mode=EventTriggerMode.ON_TRUE)
+        action = _make_action(input_type=InputType.BUTTON, trigger_mode=EventTriggerMode.ON_TRUE)
         btn = ManagedButton(action, lambda: False)
         s = str(btn)
         assert "ManagedButton(" in s
@@ -188,9 +189,9 @@ class TestManagedButtonStr:
         assert "bind=Operator.y_button (4)" in str(btn)
 
     def test_boolean_trigger_shows_threshold(self):
-        action = _make_action(input_type=InputType.BOOLEAN_TRIGGER,
-                              trigger_mode=EventTriggerMode.TOGGLE_ON_TRUE,
-                              threshold=0.75)
+        action = _make_action(
+            input_type=InputType.BOOLEAN_TRIGGER, trigger_mode=EventTriggerMode.TOGGLE_ON_TRUE, threshold=0.75
+        )
         btn = ManagedButton(action, lambda: False)
         s = str(btn)
         assert "type=boolean_trigger" in s
@@ -209,11 +210,10 @@ class TestManagedButtonStr:
 
 # --- ManagedRumble __str__ ---
 
-class TestManagedRumbleStr:
 
+class TestManagedRumbleStr:
     def test_basic_str(self):
-        action = _make_action(input_type=InputType.OUTPUT,
-                              trigger_mode=EventTriggerMode.RAW)
+        action = _make_action(input_type=InputType.OUTPUT, trigger_mode=EventTriggerMode.RAW)
         rumble = ManagedRumble(action, lambda v: None)
         s = str(rumble)
         assert "ManagedRumble(" in s
@@ -232,6 +232,7 @@ class TestManagedRumbleStr:
 
 # --- Factory-level: print all controls from test YAML ---
 
+
 class TestFactoryPrintAllControls:
     """Create all controls from the test YAML and print their __str__.
 
@@ -243,20 +244,15 @@ class TestFactoryPrintAllControls:
     def test_print_all_controls(self):
         from utils.input.factory import InputFactory
 
-        yaml_path = os.path.join(
-            os.path.dirname(__file__), "..",
-            "data", "inputs", "general_unit_test_mappings.yaml")
+        yaml_path = os.path.join(os.path.dirname(__file__), "..", "data", "inputs", "general_unit_test_mappings.yaml")
 
-        factory = InputFactory(
-            config_path=yaml_path, register_global=False)
+        factory = InputFactory(config_path=yaml_path, register_global=False)
 
         printed = []
 
         # Buttons
         for qn, action in factory.config.actions.items():
-            if action.input_type in (
-                InputType.BUTTON, InputType.BOOLEAN_TRIGGER
-            ):
+            if action.input_type in (InputType.BUTTON, InputType.BOOLEAN_TRIGGER):
                 btn = factory.getButton(qn, required=False)
                 s = str(btn)
                 printed.append(s)
@@ -267,9 +263,7 @@ class TestFactoryPrintAllControls:
 
         # Analogs (including virtual)
         for qn, action in factory.config.actions.items():
-            if action.input_type in (
-                InputType.ANALOG, InputType.VIRTUAL_ANALOG
-            ):
+            if action.input_type in (InputType.ANALOG, InputType.VIRTUAL_ANALOG):
                 analog = factory.getAnalog(qn, required=False)
                 s = str(analog)
                 printed.append(s)

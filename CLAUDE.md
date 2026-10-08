@@ -34,9 +34,10 @@ python -m robotpy coverage test     # Run tests with coverage (used by CI)
 
 **Lint:**
 ```bash
-make lint
-# Or directly (rules come from .flake8):
-flake8 .
+make lint               # ruff check + ruff format --check (same as CI)
+make format             # auto-fix lint and format
+make typecheck          # pyright (informational for now)
+pre-commit install      # once per clone: runs ruff on every commit
 ```
 
 **Deploy to robot:**
@@ -46,7 +47,7 @@ python -m robotpy deploy
 ```
 
 **Style:**
-Follow major style guidelines from PEP8 based on what is configured for flake8.
+Code is formatted with `ruff format` and linted with `ruff check`; settings live in `pyproject.toml`. Don't hand-format or argue style in reviews: run `make format`. Add type hints to new code; pyright runs in CI (non-blocking until the existing findings are fixed).
 
 ## Architecture
 
@@ -95,8 +96,9 @@ Drivetrain modules start at CAN ID 50 with 3 consecutive IDs per module (drive, 
 GitHub Actions (`.github/workflows/robot_ci.yml`):
 - Unit tests on Linux (with coverage report artifact and sim smoke test), Windows and macOS: `python -m robotpy coverage test`
 - RobotPy 2027 preview job (informational: stays green, reports breakage as a warning and in the job summary)
-- Lint (critical): `flake8 .`, rules from `.flake8` (same as `make lint`)
-- Lint (extra): complexity and line-length report (non-blocking)
+- Lint and format: `ruff check .` and `ruff format --check .`, rules from `pyproject.toml` (same as `make lint` and pre-commit; blocking)
+- Type check: pyright, informational (stays green, reports the error count as a warning)
+- pip caching on every job, and a new push cancels the superseded run
 - pdoc docs build, deployed to GitHub Pages from `main`
 - Dependabot keeps GitHub Actions versions current
 
@@ -115,16 +117,16 @@ GitHub Actions (`.github/workflows/robot_ci.yml`):
 ```python
 from ntcore.util import ntproperty
 
+
 class MySubsystem:
-    saved_limit = ntproperty('/MySubsystem/saved_limit', 0.0,
-                             writeDefault=False, persistent=True)
+    saved_limit = ntproperty("/MySubsystem/saved_limit", 0.0, writeDefault=False, persistent=True)
 ```
 
 **Non-persistent state:** Use `ntproperty` with `writeDefault=True` (default) for runtime telemetry that doesn't need to persist:
 
 ```python
 class MySubsystem:
-    status = ntproperty('/MySubsystem/status', 'unknown', writeDefault=True)
+    status = ntproperty("/MySubsystem/status", "unknown", writeDefault=True)
 ```
 
 
