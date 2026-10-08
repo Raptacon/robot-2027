@@ -8,6 +8,8 @@ import commands2
 import wpilib
 
 from commands.drive.bindings import bind_driver_controls
+from commands.drive.calibrate_offsets import CalibrateOffsets
+from commands.drive.characterization import register_swerve
 from commands.drive.module_check import ModuleCheck
 from commands.drive.teleop_drive import TeleopDrive
 from config.loader import load_robot_config
@@ -16,6 +18,7 @@ from subsystem.health_and_status import HealthAndStatus
 from utils.datalog_bridge import setup_logging
 from utils.input import InputFactory
 from utils.loop_timing import LoopTimer
+from utils.sysid.chooser import CharacterizationChooser
 
 
 class MyRobot(commands2.TimedCommandRobot):
@@ -27,8 +30,9 @@ class MyRobot(commands2.TimedCommandRobot):
     It sets up logging, loop timing and health telemetry, the driver
     controller, and the swerve drivetrain with teleop driving. In simulation
     the drivetrain runs on simulated IO; on the robot it uses the SPARK MAX,
-    CANcoder and gyro IO. Test mode runs the module check (wheels to 0, 90
-    and 180 degrees) for bring-up on blocks.
+    CANcoder and gyro IO. Test mode runs the test picked on the dashboard's
+    Characterization chooser: the module check (wheels to 0, 90 and 180
+    degrees) by default, or a SysId or calibration test.
     """
 
     # 20 ms default period (50 Hz)
@@ -71,7 +75,15 @@ class MyRobot(commands2.TimedCommandRobot):
             self.drivetrain = build_drivetrain(self.robot_config, loop_period_s=MyRobot.kDefaultPeriod / 1000)
             self.startRevLogging()
         self.teleop = bind_driver_controls(self.inputs, self.drivetrain)
-        self.module_check = ModuleCheck(self.drivetrain)
+
+        # Test mode runs whatever is picked on the Characterization chooser
+        # (module check by default, or a SysId or calibration test).
+        self.characterization = CharacterizationChooser("Module check", ModuleCheck(self.drivetrain))
+        self.sysid = register_swerve(self.characterization, self.drivetrain)
+        self.characterization.publish()
+        self.calibrate_offsets = CalibrateOffsets(self.drivetrain)
+        wpilib.SmartDashboard.putData("Characterization/Calibrate offsets", self.calibrate_offsets)
+        self.test_command: commands2.Command | None = None
 
     def telemInit(self) -> None:
         """Initialize data logging: NT logging, console, DS, and vendor loggers.
@@ -138,12 +150,19 @@ class MyRobot(commands2.TimedCommandRobot):
         self.__timing.start("userCode")
 
     def testInit(self) -> None:
-        """Test mode runs the module check: every wheel points at 0, 90 and 180 degrees in turn."""
+        """Test mode runs the test picked on the dashboard's Characterization chooser.
+
+        The default is the module check (every wheel points at 0, 90 and 180
+        degrees in turn). See commands/drive/characterization.py for the others.
+        """
         self.__timing.reset_all()
-        self.module_check.schedule()
+        self.test_command = self.characterization.selected()
+        self.test_command.schedule()
 
     def testExit(self) -> None:
-        self.module_check.cancel()
+        if self.test_command is not None:
+            self.test_command.cancel()
+            self.test_command = None
 
     def testPeriodic(self) -> None:
         self.__timing.start("userCode")

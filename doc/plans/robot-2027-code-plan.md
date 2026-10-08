@@ -140,6 +140,12 @@ commands/drive/
   module_check.py        # test mode: points every wheel at 0, 90, 180 degrees for checking on blocks
   characterization.py    # drive SysId, wheel radius, steer step test
   calibrate_offsets.py   # test-mode: prints CANcoder offsets as Python
+utils/sysid/
+  settings.py            # SysIdSettings: ramp, step, timeouts, voltage limit (no WPILib, so config can use it)
+  characterizable.py     # what a mechanism provides: set_voltage, read (volts, position, velocity)
+  routines.py            # SysIdTests: the four tests as commands, wpilog logging, quick estimate
+  fit.py                 # least-squares kS / kV / kA fit for the dashboard estimate and CI tests
+  chooser.py             # the test-mode "Characterization" chooser
 physics.py               # thin: steps the sim IO and BatterySim
 tests/drivetrain/        # config sanity, kinematics, module, sim scenarios
 ```
@@ -181,9 +187,9 @@ Two rules keep it cheap in Python: read each signal once per loop into the input
 
 One SysId helper serves every mechanism, so the swerve is just its first user. A mechanism registers how to apply voltage and read position and velocity, and gets the four SysId tests as commands on a "Characterization" chooser.
 
-- `utils/sysid/characterizable.py`: a small interface (`set_voltage`, `get_position`, `get_velocity`, units, safe limits).
-- `utils/sysid/routines.py`: builds `commands2.sysid.SysIdRoutine` quasistatic and dynamic tests from that interface, with ramp rate, step voltage and timeout from config; logs to wpilog in the format the SysId tool reads.
-- `utils/sysid/chooser.py`: collects every registered mechanism into one dashboard chooser, enabled in test mode only.
+- `utils/sysid/characterizable.py`: a small description of a mechanism (`set_voltage`, `read` returning applied volts, position and velocity, linear or angular units, and `SysIdSettings` safe limits).
+- `utils/sysid/routines.py`: builds `commands2.sysid.SysIdRoutine` quasistatic and dynamic tests from that description, with ramp rate, step voltage and timeouts from config; logs to wpilog in the format the SysId tool reads (real robot only), and publishes a quick kS/kV/kA estimate (`utils/sysid/fit.py`) after each test.
+- `utils/sysid/chooser.py`: collects every registered mechanism into one dashboard chooser; test mode runs the picked option (the module check by default).
 - Swerve registers three: drive (all wheels locked at 0°, on carpet), steer (on blocks), and a wheel-radius routine that isn't SysId but lives on the same chooser.
 - Later mechanisms (shooter flywheel, turret, arm) register the same way, replacing the separate `examples/*-sysid` robots.
 
