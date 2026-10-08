@@ -1,0 +1,22 @@
+#Common Python Libs
+pyflakes
+pyyaml
+
+#Package, testing tools
+flake8
+coverage
+wheel
+pdoc
+
+#FRC-specific packages
+robotpy[all]==2026.*
+robotpy-rev==2026.*
+robotpy-navx==2026.*
+robotpy-pathplannerlib==2026.*
+robotpy-urcl==2026.*
+phoenix6==26.*
+photonlibpy==2026.*
+
+#macOS sim controller support (GLFW cannot read Xbox/PS controllers on macOS)
+pysdl2; sys_platform == "darwin"
+pysdl2-dll; sys_platform == "darwin"

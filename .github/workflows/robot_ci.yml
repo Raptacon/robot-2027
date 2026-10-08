@@ -1,0 +1,242 @@
+name: Raptacon (Team 3200) CI Pipeline
+
+on:
+  push:
+    branches: [main, swerve-dev]
+  pull_request:
+  schedule:
+    - cron: '0 2 * * *'
+
+jobs:
+  RobotUnitTestLinux:
+    name: Unit / Integration Tests (Linux)
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      timeout-minutes: 2
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.14.*
+
+    - name: Install dependencies
+      timeout-minutes: 5
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Robotpy tests with coverage
+      timeout-minutes: 5
+      run: |
+        python -m robotpy coverage test
+        python -m coverage xml -o coverage.xml
+        python -m coverage report > coverage.txt
+
+    - name: Upload coverage report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage
+        path: |
+          coverage.xml
+          coverage.txt
+        if-no-files-found: ignore
+
+    - name: Sim smoke test (headless, 5s)
+      timeout-minutes: 1
+      run: python .github/scripts/sim_smoke.py
+
+  RobotUnitTestWindows:
+    name: Unit / Integration Tests (Windows)
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      timeout-minutes: 2
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.14.*
+
+    - name: Install dependencies
+      timeout-minutes: 5
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    - name: Robotpy tests
+      timeout-minutes: 5
+      run: |
+        python -m robotpy coverage test
+
+  RobotUnitTestMacOS:
+    name: Unit / Integration Tests (macOS)
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      timeout-minutes: 2
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.14.*
+
+    - name: Install dependencies
+      timeout-minutes: 5
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    - name: Robotpy tests
+      timeout-minutes: 5
+      run: |
+        python -m robotpy coverage test
+
+    - name: Sim smoke test (headless, 5s)
+      timeout-minutes: 1
+      run: python .github/scripts/sim_smoke.py
+
+  RobotPy2027Preview:
+    # Early warning for SystemCore / RobotPy 2027 breakage. Informational:
+    # the job stays green and reports failures as a warning annotation and
+    # in the job summary, so it never blocks a merge or trains people to
+    # ignore red checks. Porting to 2027 is milestone M8.
+    name: RobotPy 2027 preview (informational)
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      timeout-minutes: 2
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.14.*
+
+    - name: Install RobotPy 2027 pre-release
+      timeout-minutes: 5
+      run: |
+        python -m pip install --upgrade pip
+        pip install --pre "robotpy[all]==2027.*" pyyaml
+        # Vendor libraries may not have 2027 builds yet; install what exists
+        for pkg in pyfrc robotpy-rev robotpy-navx robotpy-urcl; do
+          pip install --pre "$pkg==2027.*" -q 2>/dev/null \
+            && echo "installed $pkg" || echo "no 2027 build of $pkg yet"
+        done
+        pip freeze | grep -i -E "robotpy|wpilib|pyfrc|rev|navx|urcl"
+
+    - name: Robotpy tests
+      id: tests
+      continue-on-error: true
+      timeout-minutes: 5
+      run: |
+        set -o pipefail
+        python -m robotpy test 2>&1 | tee preview-test.log
+
+    - name: Report 2027 compatibility
+      if: always()
+      run: |
+        if [ "${{ steps.tests.outcome }}" = "success" ]; then
+          echo "### RobotPy 2027 preview: tests pass" >> "$GITHUB_STEP_SUMMARY"
+        else
+          echo "::warning title=RobotPy 2027 preview::Tests fail on RobotPy 2027 pre-release packages (expected until M8). See this job's summary."
+          {
+            echo "### RobotPy 2027 preview: tests fail (expected until M8)"
+            echo '```'
+            grep -E "Error|error|FAILED|passed|failed" preview-test.log | head -40
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+        fi
+
+  StaticCritical:
+    name: Critical Static Analysis
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      timeout-minutes: 2
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.14.*
+
+    - name: Lint with flake8 critical
+      timeout-minutes: 1
+      run: |
+        pip install flake8
+        # Rules come from .flake8 so local `make lint` and CI can't drift
+        flake8 .
+
+  ExtraStaticAnalysis:
+    name: Extra Static Analysis
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      timeout-minutes: 2
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.14.*
+
+    - name: Lint with flake8 extra
+      timeout-minutes: 1
+      run: |
+        pip install flake8
+        # Non-blocking style report; excludes come from .flake8
+        flake8 . --exit-zero --select=E,W,F,C90 --max-complexity=10 --max-line-length=127 --ignore=E265,E232,W391,E302,W293,W503
+
+  BuildDocs:
+    name: Build Documentation
+    runs-on: ubuntu-latest
+    needs: [RobotUnitTestLinux, RobotUnitTestWindows, RobotUnitTestMacOS, StaticCritical]
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      timeout-minutes: 2
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.14.*
+
+    - name: Install dependencies
+      timeout-minutes: 5
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Build documentation with pdoc
+      timeout-minutes: 2
+      run: |
+        python3 doc/build_docs.py docs/
+
+    - name: Upload docs artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: documentation
+        path: docs/
+
+  DeployDocs:
+    name: Deploy Documentation
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [BuildDocs]
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+    - name: Download docs artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: documentation
+        path: docs/
+
+    - name: Upload Pages artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: docs/
+
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
