@@ -7,6 +7,8 @@ import typing
 import commands2
 import wpilib
 
+from config.loader import load_robot_config
+from subsystem.drivetrain.drivetrain import Drivetrain
 from subsystem.health_and_status import HealthAndStatus
 from utils.datalog_bridge import setup_logging
 from utils.loop_timing import LoopTimer
@@ -18,9 +20,10 @@ class MyRobot(commands2.TimedCommandRobot):
     Command v2 robots are encouraged to inherit from TimedCommandRobot, which
     runs the command scheduler for you every loop.
 
-    The seed robot has no drive subsystems yet. It sets up logging, loop
-    timing and health telemetry; the swerve drivetrain is added on the
-    swerve-dev branch.
+    It sets up logging, loop timing and health telemetry, and builds the
+    swerve drivetrain. In simulation the drivetrain runs on simulated IO;
+    the real hardware IO arrives in milestone M5, so on the robot there is
+    no drivetrain yet.
     """
 
     # 20 ms default period (50 Hz)
@@ -44,6 +47,14 @@ class MyRobot(commands2.TimedCommandRobot):
         self.telemInit()
 
         self.health = HealthAndStatus()
+
+        self.robot_config = load_robot_config()
+        self.drivetrain: Drivetrain | None = None
+        if self.isSimulation():
+            from subsystem.drivetrain.drivetrain_sim import DrivetrainSim
+
+            self.drive_sim = DrivetrainSim(self.robot_config, loop_period_s=MyRobot.kDefaultPeriod / 1000)
+            self.drivetrain = self.drive_sim.drivetrain
 
     def telemInit(self) -> None:
         """Initialize data logging: NT logging, console, DS, and vendor loggers.

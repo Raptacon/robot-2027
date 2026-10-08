@@ -99,6 +99,40 @@ class CornerConfig:
 
 
 @dataclass(frozen=True)
+class DriveFeedforward:
+    """How many volts the drive motor needs, worked out ahead of time.
+
+    The motor controller's speed loop only corrects errors after they
+    happen. A feedforward guesses the right voltage up front from the
+    target speed, so the loop has little left to correct. The numbers come
+    from a SysId test (milestone M6); until then kS is 0 and kV is worked out
+    from the motor's free speed.
+
+    voltage = kS x sign(speed) + kV x speed
+
+    Attributes:
+        ks_volts: Volts needed just to overcome friction and start moving.
+        kv_volts_per_mps: Volts per meter per second of wheel speed. ``None``
+            means "use 12 V divided by the theoretical top speed".
+
+    Example:
+        >>> from config.robot_config import DriveFeedforward
+        >>> ff = DriveFeedforward(ks_volts=0.2, kv_volts_per_mps=2.5)
+        >>> ff.volts(2.0, kv_volts_per_mps=ff.kv_volts_per_mps)  # 0.2 + 2.5 * 2.0
+        5.2
+    """
+
+    ks_volts: float = 0.0
+    kv_volts_per_mps: float | None = None
+
+    def volts(self, speed_mps: float, kv_volts_per_mps: float) -> float:
+        """Feedforward voltage for a wheel speed, using the given kV."""
+        if speed_mps == 0.0:
+            return 0.0
+        return math.copysign(self.ks_volts, speed_mps) + kv_volts_per_mps * speed_mps
+
+
+@dataclass(frozen=True)
 class RobotConfig:
     """Everything the drive code needs to know about one robot's swerve.
 
@@ -119,6 +153,8 @@ class RobotConfig:
             expects counterclockwise to be positive.
         can_bus: Which CAN bus the drive is on. Empty means the default bus.
             Choosing a bus on SystemCore comes in milestone M8.
+        drive_feedforward: The drive motors' :class:`DriveFeedforward`.
+            Replace with SysId values in milestone M6.
 
     The properties below are worked out from these values, so they always
     agree with each other. Don't copy them into the config by hand.
@@ -142,6 +178,7 @@ class RobotConfig:
     gyro_can_id: int | None = None
     gyro_inverted: bool = False
     can_bus: str = ""
+    drive_feedforward: DriveFeedforward = DriveFeedforward()
 
     @property
     def drive_m_per_motor_rot(self) -> float:
@@ -152,6 +189,16 @@ class RobotConfig:
     def free_speed_mps(self) -> float:
         """Theoretical top speed in meters per second. Expect 80 to 90 percent of it in practice."""
         return self.preset.free_speed_mps(self.drive_motor, self.wheel_radius_m)
+
+    @property
+    def drive_kv_volts_per_mps(self) -> float:
+        """Drive kV: the measured value if set, otherwise 12 V / theoretical top speed."""
+        kv = self.drive_feedforward.kv_volts_per_mps
+        return kv if kv is not None else 12.0 / self.free_speed_mps
+
+    def drive_feedforward_volts(self, speed_mps: float) -> float:
+        """Feedforward voltage for one wheel's target speed (kS and kV from the config)."""
+        return self.drive_feedforward.volts(speed_mps, self.drive_kv_volts_per_mps)
 
     @property
     def drive_base_radius_m(self) -> float:
