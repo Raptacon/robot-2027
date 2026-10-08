@@ -110,9 +110,10 @@ Vendor code (REV, CTRE, NavX) appears only in files ending `_spark.py`, `_cancod
 ```
 config/
   module_presets.py      # MK4I / MK4 gearing tables (frozen dataclasses, incl. steer inversion, encoder direction)
+  robot_config.py        # CornerConfig / RobotConfig types and the square_corners helper
   robots/
     swerve_test_bot.py   # per-robot: preset choice, CAN IDs + bus, offsets, drive inversions, gains, geometry
-  loader.py              # picks the robot config (NT /robot/name, like today)
+  loader.py              # picks the robot config from persistent NT /robot/name
 subsystem/drivetrain/
   io/
     module_io.py         # ModuleIO interface + ModuleInputs dataclass (SI units)
