@@ -130,9 +130,11 @@ subsystem/drivetrain/
   drivetrain_sim.py      # builds a sim drivetrain and tracks the true pose for tests
   odometry_sampler.py    # swappable: once per loop now, thread later
 commands/drive/
-  teleop_drive.py        # radial deadband, shaping, slew, field-relative, heading lock
+  teleop_drive.py        # field-relative per alliance, slow and robot-relative modes, heading snaps
+  stick_shaping.py       # radial deadband, curve, vector slew limit
   heading_lock.py
   x_lock.py
+  bindings.py            # connects the YAML driver actions to these commands
   characterization.py    # drive SysId, wheel radius, steer step test
   calibrate_offsets.py   # test-mode: prints CANcoder offsets as Python
 physics.py               # thin: steps the sim IO and BatterySim
@@ -153,6 +155,7 @@ Each milestone ends with green CI and a merge of `swerve-dev` into `main`. M0 to
 8. **M7 Autonomous and vision:** PathPlanner config from measured values, port localization from robot-2026. Done when a 3 m path ends within 3 cm and 2°, with and without vision.
 9. **M8 SystemCore readiness:** track the RobotPy 2027 preview job, move CAN bus assignment to `CANPort`, decide on an odometry thread. Done when tests pass on the 2027 packages.
 10. **M9 Repo hardening and deploy review:** turn on branch protection for `main` and `swerve-dev` (section 1) with the Linux tests and ruff lint as required checks; make pyright blocking once its findings are cleared; review deploy provenance and event deploys (below) and adopt what's useful. Done when protections are on and the deploy decision is written down here.
+11. **M10 Milestone reference scrub:** milestone names (M0 to M10, "milestone M5" and so on) are planning labels that mean nothing to someone reading the code next season. Search everything committed outside this plan (code, docstrings, comments, tests, `CLAUDE.md`, `doc/`) with `git grep -n -E "\bM[0-9]+\b|[Mm]ilestone"` and rewrite each hit to say what the feature is (for example "until the hardware IO is written" instead of "milestone M5"). The `swerve-mN` tags and PR titles keep their milestone names. Done when that search only finds this plan.
 
 **Deploy provenance and event deploys (to review at M9).** 6328 and other teams make sure the code on the robot is always in git: their event deploy commits any uncommitted changes to an event branch before deploying. A Python version for us: a `make deploy` that refuses a dirty tree (or commits to `event/<event-name>`), tags each event deploy, and publishes the git hash, branch and dirty flag on the dashboard and in the wpilog, so the pit checklist's "deployed code matches the latest commit" check is one glance.
 

@@ -82,6 +82,10 @@ Code is formatted with `ruff format` and linted with `ruff check`; settings live
 
 WPILib math classes that moved or were renamed in 2027 (geometry, kinematics, estimator) are imported from `utils/wpimath_compat.py`; alerts from `utils/alerts.py`. Use `wpilib.RobotState.isDisabled()` (not `DriverStation`), which exists in both versions.
 
+### Teleop driving (`commands/drive/`)
+
+`bindings.py` makes `TeleopDrive` the drivetrain's default command and binds the driver actions from the YAML (robot-relative hold, slow toggle, heading re-zero, X-lock hold, D-pad heading snaps, cancel all). `TeleopDrive` takes plain callables for the sticks so tests drive it without a controller; it shapes the translate stick as a vector (`stick_shaping.py`: round deadband, curve, `VectorSlewLimiter`), flips driver directions for the red alliance (`utils/alliance.py`, works on 2026 and 2027), and holds heading with `HeadingLock` when the rotate stick is released. Driver feel lives in `TeleopSettings`. `robot.py` creates the `InputFactory` before any subsystem. Tests: `tests/drivetrain/test_teleop.py` (both alliances, on the drivetrain sim) and `tests/test_teleop_controller.py` (whole robot with a simulated Xbox controller).
+
 ### Controller Config (`utils/controller/`) and Input Factory (`utils/input/`)
 
 Shared data model (`utils/controller/model.py`) defines `ActionDefinition`, `ControllerConfig`, and `FullConfig`. Actions use qualified names: `group.name` (e.g. `drivetrain.rotate`). Input types: BUTTON, ANALOG, OUTPUT, BOOLEAN_TRIGGER, VIRTUAL_ANALOG. D-pad directions are treated as buttons. YAML I/O in `config_io.py`. Portable curve math in `utils/math/curves.py`.
