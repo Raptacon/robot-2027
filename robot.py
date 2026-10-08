@@ -8,6 +8,7 @@ import commands2
 import wpilib
 
 from commands.drive.bindings import bind_driver_controls
+from commands.drive.module_check import ModuleCheck
 from commands.drive.teleop_drive import TeleopDrive
 from config.loader import load_robot_config
 from subsystem.drivetrain.drivetrain import Drivetrain
@@ -25,8 +26,9 @@ class MyRobot(commands2.TimedCommandRobot):
 
     It sets up logging, loop timing and health telemetry, the driver
     controller, and the swerve drivetrain with teleop driving. In simulation
-    the drivetrain runs on simulated IO; on the robot there is no drivetrain
-    until the hardware IO is written.
+    the drivetrain runs on simulated IO; on the robot it uses the SPARK MAX,
+    CANcoder and gyro IO. Test mode runs the module check (wheels to 0, 90
+    and 180 degrees) for bring-up on blocks.
     """
 
     # 20 ms default period (50 Hz)
@@ -56,15 +58,20 @@ class MyRobot(commands2.TimedCommandRobot):
         self.health = HealthAndStatus()
 
         self.robot_config = load_robot_config()
-        self.drivetrain: Drivetrain | None = None
-        self.teleop: TeleopDrive | None = None
+        self.drivetrain: Drivetrain
+        self.teleop: TeleopDrive
         if self.isSimulation():
             from subsystem.drivetrain.drivetrain_sim import DrivetrainSim
 
             self.drive_sim = DrivetrainSim(self.robot_config, loop_period_s=MyRobot.kDefaultPeriod / 1000)
             self.drivetrain = self.drive_sim.drivetrain
-        if self.drivetrain is not None:
-            self.teleop = bind_driver_controls(self.inputs, self.drivetrain)
+        else:
+            from subsystem.drivetrain.drivetrain_hardware import build_drivetrain
+
+            self.drivetrain = build_drivetrain(self.robot_config, loop_period_s=MyRobot.kDefaultPeriod / 1000)
+            self.startRevLogging()
+        self.teleop = bind_driver_controls(self.inputs, self.drivetrain)
+        self.module_check = ModuleCheck(self.drivetrain)
 
     def telemInit(self) -> None:
         """Initialize data logging: NT logging, console, DS, and vendor loggers.
@@ -86,6 +93,24 @@ class MyRobot(commands2.TimedCommandRobot):
         from rev import StatusLogger
 
         StatusLogger.start()
+
+    def startRevLogging(self) -> None:
+        """Log every SPARK MAX's CAN data to the wpilog with URCL, named by corner.
+
+        AdvantageScope shows these as ``frontLeft drive`` and so on, which
+        is what you want when checking currents and SysId runs. URCL has no
+        RobotPy 2027 build yet, so this is skipped there.
+        """
+        try:
+            from urcl import URCL
+        except ImportError:
+            logging.warning("URCL not installed; SPARK MAX CAN data won't be logged")
+            return
+        aliases = {}
+        for corner in self.robot_config.corners:
+            aliases[corner.drive_can_id] = f"{corner.name} drive"
+            aliases[corner.steer_can_id] = f"{corner.name} steer"
+        URCL.start(aliases, wpilib.DataLogManager.getLog())
 
     def robotPeriodic(self) -> None:
         self.__frameTimingPeriodic()
@@ -113,7 +138,12 @@ class MyRobot(commands2.TimedCommandRobot):
         self.__timing.start("userCode")
 
     def testInit(self) -> None:
+        """Test mode runs the module check: every wheel points at 0, 90 and 180 degrees in turn."""
         self.__timing.reset_all()
+        self.module_check.schedule()
+
+    def testExit(self) -> None:
+        self.module_check.cancel()
 
     def testPeriodic(self) -> None:
         self.__timing.start("userCode")
