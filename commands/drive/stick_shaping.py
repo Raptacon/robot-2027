@@ -29,6 +29,13 @@ Example:
 
 import math
 
+# TODO: Move stick-vector shaping into the controller shaping factory
+# (utils/input/shaping.py). Add a 2D "translate" action whose deadband and
+# curve (squared, spline, segmented) come from the YAML and are tunable from
+# NetworkTables, applied to the stick's length instead of each axis. Then
+# TeleopDrive can use it and shape_stick can go. VectorSlewLimiter stays,
+# since the factory's slew works on one axis at a time.
+
 
 def shape_stick(x: float, y: float, deadband: float, exponent: float) -> tuple[float, float]:
     """Apply a round deadband and a response curve to a stick, keeping its direction.
