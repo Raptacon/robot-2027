@@ -115,16 +115,16 @@ GitHub Actions (`.github/workflows/robot_ci.yml`):
 ```python
 from ntcore.util import ntproperty
 
+
 class MySubsystem:
-    saved_limit = ntproperty('/MySubsystem/saved_limit', 0.0,
-                             writeDefault=False, persistent=True)
+    saved_limit = ntproperty("/MySubsystem/saved_limit", 0.0, writeDefault=False, persistent=True)
 ```
 
 **Non-persistent state:** Use `ntproperty` with `writeDefault=True` (default) for runtime telemetry that doesn't need to persist:
 
 ```python
 class MySubsystem:
-    status = ntproperty('/MySubsystem/status', 'unknown', writeDefault=True)
+    status = ntproperty("/MySubsystem/status", "unknown", writeDefault=True)
 ```
 
 

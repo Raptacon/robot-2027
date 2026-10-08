@@ -63,8 +63,7 @@ def start_controller_bridge() -> None:
         import sdl2
     except ImportError:
         wpilib.reportWarning(
-            "pysdl2 not installed — Xbox controller input in sim requires "
-            "'pip install pysdl2 pysdl2-dll' on macOS"
+            "pysdl2 not installed — Xbox controller input in sim requires 'pip install pysdl2 pysdl2-dll' on macOS"
         )
         return
 
@@ -72,12 +71,12 @@ def start_controller_bridge() -> None:
 
     # SDL2 axis constant → WPILib axis index
     axis_map = {
-        sdl2.SDL_CONTROLLER_AXIS_LEFTX: 0,        # kLeftX
-        sdl2.SDL_CONTROLLER_AXIS_LEFTY: 1,         # kLeftY
-        sdl2.SDL_CONTROLLER_AXIS_TRIGGERLEFT: 2,   # kLeftTrigger
-        sdl2.SDL_CONTROLLER_AXIS_TRIGGERRIGHT: 3,   # kRightTrigger
-        sdl2.SDL_CONTROLLER_AXIS_RIGHTX: 4,        # kRightX
-        sdl2.SDL_CONTROLLER_AXIS_RIGHTY: 5,        # kRightY
+        sdl2.SDL_CONTROLLER_AXIS_LEFTX: 0,  # kLeftX
+        sdl2.SDL_CONTROLLER_AXIS_LEFTY: 1,  # kLeftY
+        sdl2.SDL_CONTROLLER_AXIS_TRIGGERLEFT: 2,  # kLeftTrigger
+        sdl2.SDL_CONTROLLER_AXIS_TRIGGERRIGHT: 3,  # kRightTrigger
+        sdl2.SDL_CONTROLLER_AXIS_RIGHTX: 4,  # kRightX
+        sdl2.SDL_CONTROLLER_AXIS_RIGHTY: 5,  # kRightY
     }
 
     # SDL2 button constant → bit index in HAL button bitmask.
@@ -176,20 +175,15 @@ def start_controller_bridge() -> None:
                 buttons = 0
                 for sdl_btn, bit_index in button_map.items():
                     if sdl2.SDL_GameControllerGetButton(gc, sdl_btn):
-                        buttons |= (1 << bit_index)
+                        buttons |= 1 << bit_index
                 hal.simulation.setJoystickButtonsValue(port, buttons)
 
                 # D-pad → POV angle
-                dpad = [
-                    bool(sdl2.SDL_GameControllerGetButton(gc, b))
-                    for b in dpad_buttons
-                ]
+                dpad = [bool(sdl2.SDL_GameControllerGetButton(gc, b)) for b in dpad_buttons]
                 hal.simulation.setJoystickPOV(port, 0, _dpad_to_pov(*dpad))
 
             hal.simulation.notifyDriverStationNewData()
             time.sleep(0.01)
 
-    t = threading.Thread(
-        target=_bridge_thread, daemon=True, name="sdl2-controller-bridge"
-    )
+    t = threading.Thread(target=_bridge_thread, daemon=True, name="sdl2-controller-bridge")
     t.start()

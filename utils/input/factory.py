@@ -74,9 +74,7 @@ def get_factory() -> "InputFactory":
     Raises RuntimeError if no factory has been created yet.
     """
     if _active_factory is None:
-        raise RuntimeError(
-            "InputFactory not initialized — create one in robotInit "
-            "before calling get_factory()")
+        raise RuntimeError("InputFactory not initialized — create one in robotInit before calling get_factory()")
     return _active_factory
 
 
@@ -103,7 +101,8 @@ class _FactoryUpdater(commands2.Subsystem):
                 "Multiple InputFactory instances (%d total) — "
                 "this factory's NT sync will not run first in the "
                 "scheduler cycle.",
-                _FactoryUpdater._instance_count)
+                _FactoryUpdater._instance_count,
+            )
         super().__init__()
         self._factory = factory
 
@@ -158,17 +157,11 @@ class InputFactory:
         elif actions_path is not None and assignments_path is not None:
             actions = load_actions_from_file(actions_path)
             controllers = load_assignments_from_file(assignments_path)
-            self._config = FullConfig(
-                actions=actions, controllers=controllers)
-            self._config_source = (
-                f"{actions_path} + {assignments_path}")
-            self._config_files = [
-                Path(actions_path).resolve(),
-                Path(assignments_path).resolve()]
+            self._config = FullConfig(actions=actions, controllers=controllers)
+            self._config_source = f"{actions_path} + {assignments_path}"
+            self._config_files = [Path(actions_path).resolve(), Path(assignments_path).resolve()]
         else:
-            raise ValueError(
-                "Must provide config, config_path, or "
-                "(actions_path + assignments_path)")
+            raise ValueError("Must provide config, config_path, or (actions_path + assignments_path)")
 
         # Create controller instances
         self._controllers: dict[int, ControllerState] = {}
@@ -180,9 +173,7 @@ class InputFactory:
         # when no joystick is plugged in (Sendable queries axes).
         for port, state in self._controllers.items():
             if wpilib.DriverStation.isJoystickConnected(port):
-                wpilib.SmartDashboard.putData(
-                    f"{_NT_BASE}/controllers/raw/{port}",
-                    state.controller)
+                wpilib.SmartDashboard.putData(f"{_NT_BASE}/controllers/raw/{port}", state.controller)
 
         # Publish bindings info and config metadata to NT
         publish_bindings_nt(_NT_BASE, self._controllers)
@@ -218,7 +209,8 @@ class InputFactory:
                 "NT sync may run after those subsystems read stale "
                 "values for one cycle. Create the factory before any "
                 "subsystems to guarantee ordering.",
-                len(scheduler._subsystems))
+                len(scheduler._subsystems),
+            )
         self._updater = _FactoryUpdater(self)
 
         # Eager action creation — pre-create all managed objects so their
@@ -229,20 +221,14 @@ class InputFactory:
         self._eager_init_active = True
         for qn, action in self._config.actions.items():
             try:
-                if action.input_type in (
-                    InputType.BUTTON, InputType.BOOLEAN_TRIGGER
-                ):
+                if action.input_type in (InputType.BUTTON, InputType.BOOLEAN_TRIGGER):
                     self.getButton(qn, required=False)
-                elif action.input_type in (
-                    InputType.ANALOG, InputType.VIRTUAL_ANALOG
-                ):
+                elif action.input_type in (InputType.ANALOG, InputType.VIRTUAL_ANALOG):
                     self.getAnalog(qn, required=False)
                 elif action.input_type == InputType.OUTPUT:
                     self.getRumbleControl(qn, required=False)
             except Exception:
-                log.warning(
-                    "Eager creation failed for '%s', will retry on "
-                    "first get*() call", qn, exc_info=True)
+                log.warning("Eager creation failed for '%s', will retry on first get*() call", qn, exc_info=True)
         self._eager_init_active = False
 
     @property
@@ -259,13 +245,12 @@ class InputFactory:
         - ("name", group="intake") -> "intake.name"
         - ("name", group=None) -> "general.name"
         """
-        if '.' in name:
+        if "." in name:
             return name
         g = group if group is not None else "general"
         return f"{g}.{name}"
 
-    def _find_binding(self, qualified_name: str
-                      ) -> tuple[ControllerState, str] | None:
+    def _find_binding(self, qualified_name: str) -> tuple[ControllerState, str] | None:
         """Find which controller+input is bound to the given action.
 
         Returns (controller_state, input_name) or None if not bound.
@@ -277,7 +262,7 @@ class InputFactory:
 
     def _mark_in_use(self, obj) -> None:
         """Mark a managed object as in-use (called outside eager init)."""
-        if not self._eager_init_active and hasattr(obj, 'nt_in_use'):
+        if not self._eager_init_active and hasattr(obj, "nt_in_use"):
             obj.nt_in_use = True
 
     # --- Factory methods ---
@@ -316,9 +301,7 @@ class InputFactory:
 
         if action is None:
             if required:
-                raise KeyError(
-                    f"Action '{qn}' not found in config "
-                    f"({self._config_source})")
+                raise KeyError(f"Action '{qn}' not found in config ({self._config_source})")
             log.warning("Action '%s' not found, returning default", qn)
             btn = ManagedButton(None, lambda: default_value, default_value)
             self._buttons[qn] = btn
@@ -326,12 +309,9 @@ class InputFactory:
 
         if binding is None:
             if required:
-                raise KeyError(
-                    f"Action '{qn}' exists but is not bound to any "
-                    f"input ({self._config_source})")
+                raise KeyError(f"Action '{qn}' exists but is not bound to any input ({self._config_source})")
             log.warning("Action '%s' not bound, returning default", qn)
-            btn = ManagedButton(
-                action, lambda: default_value, default_value)
+            btn = ManagedButton(action, lambda: default_value, default_value)
             self._buttons[qn] = btn
             return btn
 
@@ -343,8 +323,7 @@ class InputFactory:
         threshold_ref = None
         if action.input_type == InputType.BOOLEAN_TRIGGER:
             threshold_ref = [action.threshold]
-        condition = make_button_condition(
-            state, input_name, action, threshold_ref=threshold_ref)
+        condition = make_button_condition(state, input_name, action, threshold_ref=threshold_ref)
 
         # Create NT-enabled subclass
         nt_path = f"{_NT_BASE}/actions/{action.group}/{action.name}"
@@ -386,9 +365,7 @@ class InputFactory:
 
         if action is None or binding is None:
             if required:
-                raise KeyError(
-                    f"Action '{qn}' not found or not bound "
-                    f"({self._config_source})")
+                raise KeyError(f"Action '{qn}' not found or not bound ({self._config_source})")
             log.warning("Action '%s' unavailable, returning False", qn)
             fn = lambda: False
             self._raw_buttons[qn] = fn
@@ -432,28 +409,22 @@ class InputFactory:
 
         if action is None:
             if required:
-                raise KeyError(
-                    f"Action '{qn}' not found in config "
-                    f"({self._config_source})")
+                raise KeyError(f"Action '{qn}' not found in config ({self._config_source})")
             log.warning("Action '%s' not found, returning default", qn)
-            analog = ManagedAnalog(
-                None, lambda: default_value, default_value)
+            analog = ManagedAnalog(None, lambda: default_value, default_value)
             self._analogs[qn] = analog
             return analog
 
         if action.input_type == InputType.VIRTUAL_ANALOG:
             if binding is None:
                 if not required:
-                    log.warning(
-                        "Action '%s' is VIRTUAL_ANALOG but not bound, "
-                        "returning default", qn)
-                    analog = ManagedAnalog(
-                        action, lambda: default_value, default_value)
+                    log.warning("Action '%s' is VIRTUAL_ANALOG but not bound, returning default", qn)
+                    analog = ManagedAnalog(action, lambda: default_value, default_value)
                     self._analogs[qn] = analog
                     return analog
                 raise KeyError(
-                    f"VIRTUAL_ANALOG action '{qn}' exists but is not "
-                    f"bound to any input ({self._config_source})")
+                    f"VIRTUAL_ANALOG action '{qn}' exists but is not bound to any input ({self._config_source})"
+                )
             state, input_name = binding
             button_fn = make_button_condition(state, input_name, action)
             generator = VirtualAnalogGenerator(action, button_fn)
@@ -468,12 +439,9 @@ class InputFactory:
 
         if binding is None:
             if required:
-                raise KeyError(
-                    f"Action '{qn}' exists but is not bound to any "
-                    f"input ({self._config_source})")
+                raise KeyError(f"Action '{qn}' exists but is not bound to any input ({self._config_source})")
             log.warning("Action '%s' not bound, returning default", qn)
-            analog = ManagedAnalog(
-                action, lambda: default_value, default_value)
+            analog = ManagedAnalog(action, lambda: default_value, default_value)
             self._analogs[qn] = analog
             return analog
 
@@ -526,9 +494,7 @@ class InputFactory:
 
         if action is None or binding is None:
             if required:
-                raise KeyError(
-                    f"Action '{qn}' not found or not bound "
-                    f"({self._config_source})")
+                raise KeyError(f"Action '{qn}' not found or not bound ({self._config_source})")
             log.warning("Action '%s' unavailable, returning 0.0", qn)
             fn = lambda: 0.0
             self._raw_analogs[cache_key] = fn
@@ -550,6 +516,7 @@ class InputFactory:
 
         def _selective():
             return pipeline(raw_accessor())
+
         self._raw_analogs[cache_key] = _selective
         return _selective
 
@@ -582,9 +549,7 @@ class InputFactory:
 
         if action is None:
             if required:
-                raise KeyError(
-                    f"Action '{qn}' not found in config "
-                    f"({self._config_source})")
+                raise KeyError(f"Action '{qn}' not found in config ({self._config_source})")
             log.warning("Action '%s' not found, returning no-op rumble", qn)
             rumble = ManagedRumble(None, lambda v: None)
             self._rumbles[qn] = rumble
@@ -592,9 +557,7 @@ class InputFactory:
 
         if binding is None:
             if required:
-                raise KeyError(
-                    f"Action '{qn}' exists but is not bound to any "
-                    f"input ({self._config_source})")
+                raise KeyError(f"Action '{qn}' exists but is not bound to any input ({self._config_source})")
             log.warning("Action '%s' not bound, returning no-op rumble", qn)
             rumble = ManagedRumble(action, lambda v: None)
             self._rumbles[qn] = rumble
@@ -662,15 +625,14 @@ class InputFactory:
         # Update rumble timeouts
         for rumble in self._rumbles.values():
             rumble.update()
-        
+
         # Update virtual analog generators
         for gen in self._va_generators:
             gen.update()
 
     # --- Future: dynamic remapping ---
 
-    def remap(self, action_name: str, port: int,
-              input_name: str) -> None:
+    def remap(self, action_name: str, port: int, input_name: str) -> None:
         """Swap the physical input for a named action.
 
         Not implemented — reserved for future dynamic remapping.

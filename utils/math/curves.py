@@ -58,17 +58,15 @@ def evaluate_spline(points: list[dict], x: float) -> float:
                 return points[i]["y"]
             t = (x - x0) / dx
             return hermite_eval(
-                points[i]["y"], points[i]["tangent"],
-                points[i + 1]["y"], points[i + 1]["tangent"],
-                dx, t)
+                points[i]["y"], points[i]["tangent"], points[i + 1]["y"], points[i + 1]["tangent"], dx, t
+            )
     return x
 
 
 def numerical_slope(points: list[dict], x: float) -> float:
     """Estimate dy/dx at *x* by central difference."""
     eps = 0.001
-    return (evaluate_spline(points, x + eps)
-            - evaluate_spline(points, x - eps)) / (2 * eps)
+    return (evaluate_spline(points, x + eps) - evaluate_spline(points, x - eps)) / (2 * eps)
 
 
 def default_segment_points() -> list[dict]:

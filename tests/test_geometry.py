@@ -142,8 +142,13 @@ class TestChainTransforms:
 class TestCameraGeometry:
     def test_make_camera_to_dict_roundtrip(self):
         cam = make_camera(
-            "Test_Cam", x_in=6, y_in=-3, z_in=12,
-            pitch_up_deg=15, yaw_deg=90, fov_deg=70,
+            "Test_Cam",
+            x_in=6,
+            y_in=-3,
+            z_in=12,
+            pitch_up_deg=15,
+            yaw_deg=90,
+            fov_deg=70,
         )
         d = cam.to_dict()
         assert d["name"] == "Test_Cam"
@@ -174,9 +179,11 @@ class TestCameraGeometry:
 class TestMechanismMount:
     def test_simple_mechanism(self):
         mech = MechanismMount(
-            "Turret", "turret",
+            "Turret",
+            "turret",
             transform_from_inches(x_in=-2, z_in=6),
-            radius_in=4, color="#cc5555",
+            radius_in=4,
+            color="#cc5555",
         )
         d = mech.to_dict()
         assert d["name"] == "Turret"
@@ -190,9 +197,13 @@ class TestMechanismMount:
         robot_to_turret = transform_from_inches(x_in=-2, z_in=6)
         turret_to_hood = transform_from_inches(z_in=2)
         hood = MechanismMount(
-            "Hood", "generic", turret_to_hood,
-            parent_transform=robot_to_turret, parent_name="Turret",
-            width_in=3, length_in=2,
+            "Hood",
+            "generic",
+            turret_to_hood,
+            parent_transform=robot_to_turret,
+            parent_name="Turret",
+            width_in=3,
+            length_in=2,
         )
         d = hood.to_dict()
         assert d["parent"] == "Turret"
@@ -202,7 +213,8 @@ class TestMechanismMount:
 
     def test_mechanism_to_dict_meters(self):
         mech = MechanismMount(
-            "Test", "generic",
+            "Test",
+            "generic",
             transform_from_inches(x_in=10, y_in=5, z_in=12),
         )
         d = mech.to_dict()

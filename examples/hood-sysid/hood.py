@@ -13,10 +13,7 @@ from wpilib.sysid import SysIdRoutineLog
 from wpimath.controller import ArmFeedforward, PIDController
 
 
-def GetSparkSignalsPositionControlConfig(
-    signalConfig: rev.SignalsConfig,
-    periodMs: int
-) -> rev.SignalsConfig:
+def GetSparkSignalsPositionControlConfig(signalConfig: rev.SignalsConfig, periodMs: int) -> rev.SignalsConfig:
     """
     Configure telemetry signal frames for a position-controlled SparkMax.
 
@@ -32,8 +29,7 @@ def GetSparkSignalsPositionControlConfig(
         The updated SignalsConfig for method chaining
     """
     (
-        signalConfig
-        .busVoltageAlwaysOn(True)
+        signalConfig.busVoltageAlwaysOn(True)
         .busVoltagePeriodMs(periodMs)
         .appliedOutputAlwaysOn(True)
         .appliedOutputPeriodMs(periodMs)
@@ -68,41 +64,27 @@ class Hood(Subsystem):
     """
 
     # Telemetry via ntproperty (published to NT, not persisted)
-    nt_position = ntproperty('/Hood/position', 0.0, writeDefault=True)
-    nt_velocity = ntproperty('/Hood/velocity', 0.0, writeDefault=True)
-    nt_target = ntproperty('/Hood/targetPosition', 0.0, writeDefault=True)
-    nt_normalized_position = ntproperty(
-        '/Hood/normalizedPosition', 0.0, writeDefault=True)
-    nt_normalized_target = ntproperty(
-        '/Hood/normalizedTarget', 0.0, writeDefault=True)
-    nt_at_setpoint = ntproperty(
-        '/Hood/atSetpoint', False, writeDefault=True)
-    nt_applied_output = ntproperty(
-        '/Hood/appliedOutput', 0.0, writeDefault=True)
-    nt_current = ntproperty('/Hood/current', 0.0, writeDefault=True)
-    nt_bus_voltage = ntproperty(
-        '/Hood/busVoltage', 0.0, writeDefault=True)
-    nt_min_soft_limit = ntproperty(
-        '/Hood/minSoftLimit', 0.0, writeDefault=True)
-    nt_max_soft_limit = ntproperty(
-        '/Hood/maxSoftLimit', 0.0, writeDefault=True)
+    nt_position = ntproperty("/Hood/position", 0.0, writeDefault=True)
+    nt_velocity = ntproperty("/Hood/velocity", 0.0, writeDefault=True)
+    nt_target = ntproperty("/Hood/targetPosition", 0.0, writeDefault=True)
+    nt_normalized_position = ntproperty("/Hood/normalizedPosition", 0.0, writeDefault=True)
+    nt_normalized_target = ntproperty("/Hood/normalizedTarget", 0.0, writeDefault=True)
+    nt_at_setpoint = ntproperty("/Hood/atSetpoint", False, writeDefault=True)
+    nt_applied_output = ntproperty("/Hood/appliedOutput", 0.0, writeDefault=True)
+    nt_current = ntproperty("/Hood/current", 0.0, writeDefault=True)
+    nt_bus_voltage = ntproperty("/Hood/busVoltage", 0.0, writeDefault=True)
+    nt_min_soft_limit = ntproperty("/Hood/minSoftLimit", 0.0, writeDefault=True)
+    nt_max_soft_limit = ntproperty("/Hood/maxSoftLimit", 0.0, writeDefault=True)
 
     # Safety: persistent configuration
-    nt_safety_enabled = ntproperty(
-        '/Hood/safetyEnabled', True, writeDefault=True)
-    nt_stowed_angle_degrees = ntproperty(
-        '/Hood/stowedAngleDegrees', 0.0,
-        writeDefault=False, persistent=True)
-    nt_safety_rpm_threshold = ntproperty(
-        '/Hood/safetyRpmThreshold', 5.0,
-        writeDefault=False, persistent=True)
+    nt_safety_enabled = ntproperty("/Hood/safetyEnabled", True, writeDefault=True)
+    nt_stowed_angle_degrees = ntproperty("/Hood/stowedAngleDegrees", 0.0, writeDefault=False, persistent=True)
+    nt_safety_rpm_threshold = ntproperty("/Hood/safetyRpmThreshold", 5.0, writeDefault=False, persistent=True)
 
     # Dashboard tuning: set ntControlEnabled=True on dashboard,
     # then adjust ntControlAngle to drive hood to a specific angle.
-    nt_control_enabled = ntproperty(
-        '/Hood/ntControlEnabled', False, writeDefault=True)
-    nt_control_angle = ntproperty(
-        '/Hood/ntControlAngle', 0.0, writeDefault=True)
+    nt_control_enabled = ntproperty("/Hood/ntControlEnabled", False, writeDefault=True)
+    nt_control_angle = ntproperty("/Hood/ntControlAngle", 0.0, writeDefault=True)
 
     def __init__(
         self,
@@ -142,8 +124,7 @@ class Hood(Subsystem):
 
         # Control
         self.controller = PIDController(*pid)
-        wpilib.SmartDashboard.putData(
-            self.getName() + "/pid", self.controller)
+        wpilib.SmartDashboard.putData(self.getName() + "/pid", self.controller)
         self.feedforward = ArmFeedforward(*feedforward)
 
         # Voltage output limits
@@ -157,8 +138,7 @@ class Hood(Subsystem):
         # Configure motor
         config = rev.SparkMaxConfig()
         (
-            config
-            .inverted(inverted)
+            config.inverted(inverted)
             .setIdleMode(rev.SparkBaseConfig.IdleMode.kBrake)
             .voltageCompensation(12.0)
             .smartCurrentLimit(20)
@@ -169,15 +149,14 @@ class Hood(Subsystem):
         # velocity: RPM -> deg/s (divide by 60)
         velocity_conversion_factor_dps = position_conversion_factor / 60.0
         (
-            config.encoder
-            .positionConversionFactor(position_conversion_factor)
-            .velocityConversionFactor(velocity_conversion_factor_dps)
+            config.encoder.positionConversionFactor(position_conversion_factor).velocityConversionFactor(
+                velocity_conversion_factor_dps
+            )
         )
 
         # Soft limits in degrees
         (
-            config.softLimit
-            .forwardSoftLimit(max_angle_degrees)
+            config.softLimit.forwardSoftLimit(max_angle_degrees)
             .forwardSoftLimitEnabled(True)
             .reverseSoftLimit(min_angle_degrees)
             .reverseSoftLimitEnabled(True)
@@ -187,11 +166,7 @@ class Hood(Subsystem):
         GetSparkSignalsPositionControlConfig(config.signals, 20)
 
         # Apply configuration
-        self.motor.configure(
-            config,
-            rev.ResetMode.kResetSafeParameters,
-            rev.PersistMode.kNoPersistParameters
-        )
+        self.motor.configure(config, rev.ResetMode.kResetSafeParameters, rev.PersistMode.kNoPersistParameters)
 
         # Assume 0 position on startup
         self.encoder.setPosition(0)
@@ -208,10 +183,7 @@ class Hood(Subsystem):
         """Set hood target angle in degrees, clamped to valid range."""
         if not self._enabled:
             self.enable()
-        self._target_degrees = max(
-            self.min_angle_degrees,
-            min(self.max_angle_degrees, degrees)
-        )
+        self._target_degrees = max(self.min_angle_degrees, min(self.max_angle_degrees, degrees))
 
     def setAngleNormalized(self, value: float) -> None:
         """Set hood target from 0..1 range (0 = min, 1 = max angle)."""
@@ -299,32 +271,28 @@ class Hood(Subsystem):
 
         # Dashboard tuning override
         if self.nt_control_enabled:
-            self._target_degrees = max(
-                self.min_angle_degrees,
-                min(self.max_angle_degrees, self.nt_control_angle)
-            )
+            self._target_degrees = max(self.min_angle_degrees, min(self.max_angle_degrees, self.nt_control_angle))
 
         # Safety interlock: stow hood when shooter setpoint is low
-        if (self.nt_safety_enabled
-                and self._shooter is not None
-                and self._shooter.targetRPM < self.nt_safety_rpm_threshold):
+        if (
+            self.nt_safety_enabled
+            and self._shooter is not None
+            and self._shooter.targetRPM < self.nt_safety_rpm_threshold
+        ):
             self._target_degrees = self.nt_stowed_angle_degrees
 
         position_deg = self.encoder.getPosition()
 
         # PID output (volts)
-        pid_volts = self.controller.calculate(
-            position_deg, self._target_degrees)
+        pid_volts = self.controller.calculate(position_deg, self._target_degrees)
 
         # ArmFeedforward expects angle in radians from horizontal
-        ff_angle_rad = math.radians(
-            position_deg + self._horizontal_offset_degrees)
+        ff_angle_rad = math.radians(position_deg + self._horizontal_offset_degrees)
         ff_volts = self.feedforward.calculate(ff_angle_rad, 0)
 
         # Combine and clamp voltage
         total_volts = pid_volts + ff_volts
-        total_volts = max(self._min_output_volts,
-                          min(self._max_output_volts, total_volts))
+        total_volts = max(self._min_output_volts, min(self._max_output_volts, total_volts))
 
         if self.controller.atSetpoint():
             # Still apply feedforward to hold against gravity
@@ -347,24 +315,11 @@ class Hood(Subsystem):
         """
         self.mech2d = wpilib.Mechanism2d(200, 200)
         pivot = self.mech2d.getRoot("hood_pivot", 100, 100)
-        self.mech_current_arm = pivot.appendLigament(
-            "current_position", 80, 0, 6,
-            wpilib.Color8Bit(wpilib.Color.kRed)
-        )
-        self.mech_target_arm = pivot.appendLigament(
-            "target_position", 80, 0, 4,
-            wpilib.Color8Bit(wpilib.Color.kGreen)
-        )
-        pivot.appendLigament(
-            "min_limit", 80, self.min_angle_degrees, 2,
-            wpilib.Color8Bit(100, 100, 100)
-        )
-        pivot.appendLigament(
-            "max_limit", 80, self.max_angle_degrees, 2,
-            wpilib.Color8Bit(100, 100, 100)
-        )
-        wpilib.SmartDashboard.putData(
-            self.getName() + "/mechanism", self.mech2d)
+        self.mech_current_arm = pivot.appendLigament("current_position", 80, 0, 6, wpilib.Color8Bit(wpilib.Color.kRed))
+        self.mech_target_arm = pivot.appendLigament("target_position", 80, 0, 4, wpilib.Color8Bit(wpilib.Color.kGreen))
+        pivot.appendLigament("min_limit", 80, self.min_angle_degrees, 2, wpilib.Color8Bit(100, 100, 100))
+        pivot.appendLigament("max_limit", 80, self.max_angle_degrees, 2, wpilib.Color8Bit(100, 100, 100))
+        wpilib.SmartDashboard.putData(self.getName() + "/mechanism", self.mech2d)
 
     # -- Telemetry --
 
@@ -377,8 +332,7 @@ class Hood(Subsystem):
         self.nt_velocity = velocity_dps
         self.nt_target = self._target_degrees
         self.nt_normalized_position = position_deg / self.max_angle_degrees
-        self.nt_normalized_target = (
-            self._target_degrees / self.max_angle_degrees)
+        self.nt_normalized_target = self._target_degrees / self.max_angle_degrees
         self.nt_at_setpoint = self.atSetpoint()
         self.nt_applied_output = self.motor.getAppliedOutput()
         self.nt_current = self.motor.getOutputCurrent()
@@ -415,30 +369,20 @@ class Hood(Subsystem):
         velocity_rps = math.radians(velocity_dps)
 
         (
-            motor_log
-            .angularPosition(position_rad)
+            motor_log.angularPosition(position_rad)
             .angularVelocity(velocity_rps)
             .current(self.motor.getOutputCurrent())
-            .voltage(getattr(self, '_commanded_volts', 0.0))
+            .voltage(getattr(self, "_commanded_volts", 0.0))
             .value("positionDegrees", position_deg, "deg")
             .value("velocityDegPerSec", velocity_dps, "deg/s")
-            .value("positionNormalized",
-                   position_deg / self.max_angle_degrees, "")
+            .value("positionNormalized", position_deg / self.max_angle_degrees, "")
         )
 
-    def _sysIdQuasistaticCommand(
-        self,
-        direction: SysIdRoutine.Direction,
-        sysIdRoutine: SysIdRoutine
-    ) -> Command:
+    def _sysIdQuasistaticCommand(self, direction: SysIdRoutine.Direction, sysIdRoutine: SysIdRoutine) -> Command:
         """Create a quasistatic SysId command for the hood."""
         return sysIdRoutine.quasistatic(direction)
 
-    def _sysIdDynamicCommand(
-        self,
-        direction: SysIdRoutine.Direction,
-        sysIdRoutine: SysIdRoutine
-    ) -> Command:
+    def _sysIdDynamicCommand(self, direction: SysIdRoutine.Direction, sysIdRoutine: SysIdRoutine) -> Command:
         """Create a dynamic SysId command for the hood."""
         return sysIdRoutine.dynamic(direction)
 
@@ -446,21 +390,19 @@ class Hood(Subsystem):
 
     def autoAngleCommand(self) -> Command:
         """Command that sets hood angle from shooter's distance lookup."""
+
         def _action():
             if self._shooter is not None:
-                self.setAngleDegrees(
-                    self._shooter.getHoodAngleForDistance(
-                        self._shooter.targetDistance))
+                self.setAngleDegrees(self._shooter.getHoodAngleForDistance(self._shooter.targetDistance))
 
         return commands2.cmd.run(_action, self)
 
-    def manualTestCommand(
-        self, analog_input: Callable[[], float]
-    ) -> Command:
+    def manualTestCommand(self, analog_input: Callable[[], float]) -> Command:
         """Test command: analog input controls hood angle directly.
 
         Disables safety when input > 0.02, re-enables when released.
         """
+
         def _action():
             trigger = analog_input()
             self.setSafetyEnabled(trigger <= 0.02)

@@ -76,13 +76,12 @@ class ManagedButton(NtMappingMixin):
 
     def _validate_param(self, param: str) -> str | None:
         """Reject threshold mapping on non-BOOLEAN_TRIGGER actions."""
-        if (param == "threshold"
-                and self._action is not None
-                and self._action.input_type != InputType.BOOLEAN_TRIGGER):
+        if param == "threshold" and self._action is not None and self._action.input_type != InputType.BOOLEAN_TRIGGER:
             return (
                 f"Cannot map 'threshold' on a non-BOOLEAN_TRIGGER action "
                 f"('{self._action.qualified_name}' is "
-                f"{self._action.input_type.value})")
+                f"{self._action.input_type.value})"
+            )
         return None
 
     def _get_param_value(self, param: str):
@@ -95,7 +94,7 @@ class ManagedButton(NtMappingMixin):
         """Write threshold via the property and sync NT if available."""
         if param == "threshold":
             self.threshold = value
-            if hasattr(self, 'nt_threshold'):
+            if hasattr(self, "nt_threshold"):
                 self.nt_threshold = value
         else:
             setattr(self, param, value)
@@ -152,9 +151,7 @@ class ManagedButton(NtMappingMixin):
         Falls back to onTrue when no action is set and no override given.
         """
         if mode is None:
-            mode = (self._action.trigger_mode
-                    if self._action is not None
-                    else EventTriggerMode.ON_TRUE)
+            mode = self._action.trigger_mode if self._action is not None else EventTriggerMode.ON_TRUE
         method_name = self._BINDING_MAP.get(mode, "onTrue")
         return getattr(self, method_name)(command)
 

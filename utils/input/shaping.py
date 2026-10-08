@@ -42,6 +42,7 @@ def apply_deadband(value: float, deadband: float) -> float:
     """
     try:
         from wpimath import applyDeadband
+
         return applyDeadband(value, deadband)
     except ImportError:
         if abs(value) < deadband:
@@ -102,7 +103,9 @@ def build_shaping_pipeline(
                 "RAW trigger mode ignores all shaping%s — "
                 "the following settings have no effect: %s. "
                 "Use 'scaled' trigger mode to apply them.",
-                ctx, ", ".join(ignored))
+                ctx,
+                ", ".join(ignored),
+            )
         return ShapingPipeline(lambda raw: raw, "raw passthrough")
 
     # Pre-resolve curve data so closures don't re-lookup each cycle
@@ -127,14 +130,13 @@ def build_shaping_pipeline(
             v = apply_deadband(v, deadband) if deadband > 0 else v
             v = curve_squared(v)
             return v * scale
+
         desc = " -> ".join(stages) if stages else mode_name
         return ShapingPipeline(_pipeline, desc)
 
     elif trigger_mode == EventTriggerMode.SPLINE:
         if not spline_pts:
-            log.warning(
-                "SPLINE trigger mode has no spline_points data%s — "
-                "falling back to SCALED behavior", ctx)
+            log.warning("SPLINE trigger mode has no spline_points data%s — falling back to SCALED behavior", ctx)
         else:
             stages.append(f"spline({len(spline_pts)}pts)")
             if scale != 1.0:
@@ -145,14 +147,13 @@ def build_shaping_pipeline(
                 v = apply_deadband(v, deadband) if deadband > 0 else v
                 v = evaluate_spline(spline_pts, v)
                 return v * scale
+
             desc = " -> ".join(stages) if stages else mode_name
             return ShapingPipeline(_pipeline, desc)
 
     elif trigger_mode == EventTriggerMode.SEGMENTED:
         if not segment_pts:
-            log.warning(
-                "SEGMENTED trigger mode has no segment_points data%s — "
-                "falling back to SCALED behavior", ctx)
+            log.warning("SEGMENTED trigger mode has no segment_points data%s — falling back to SCALED behavior", ctx)
         else:
             stages.append(f"segments({len(segment_pts)}pts)")
             if scale != 1.0:
@@ -163,6 +164,7 @@ def build_shaping_pipeline(
                 v = apply_deadband(v, deadband) if deadband > 0 else v
                 v = evaluate_segments(segment_pts, v)
                 return v * scale
+
             desc = " -> ".join(stages) if stages else mode_name
             return ShapingPipeline(_pipeline, desc)
 
@@ -174,5 +176,6 @@ def build_shaping_pipeline(
         v = -raw if inversion else raw
         v = apply_deadband(v, deadband) if deadband > 0 else v
         return v * scale
+
     desc = " -> ".join(stages) if stages else "scaled"
     return ShapingPipeline(_pipeline, desc)

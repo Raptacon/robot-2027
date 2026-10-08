@@ -48,3 +48,28 @@ markers = [
     "graph: marks tests that generate graphs (run with '-m graph')",
 ]
 addopts = "-m 'not graph'"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["docs"]
+
+[tool.ruff.lint]
+# Pyflakes (F), real errors (E4, E7, E9), and whitespace/escape warnings
+# that flake8 used to catch. Style is handled by `ruff format`.
+select = ["E4", "E7", "E9", "F", "W291", "W292", "W605"]
+# Lambdas assigned to names are an accepted pattern in the input factory
+ignore = ["E731"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/pyfrc_test.py" = ["F403"]
+"examples/**/tests/pyfrc_test.py" = ["F403"]
+# Mocks wpilib before importing the module under test on purpose
+"tests/test_virtual_analog.py" = ["E402"]
+
+[tool.pyright]
+include = ["robot.py", "subsystem", "utils", "tests"]
+exclude = ["**/__pycache__", "docs", "examples"]
+pythonVersion = "3.11"
+typeCheckingMode = "basic"
+reportMissingModuleSource = false

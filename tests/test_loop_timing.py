@@ -14,7 +14,6 @@ def _last_ms_entry():
 
 
 class TestLoopTimerPublish:
-
     def setup_method(self):
         wpilib.simulation.pauseTiming()
         wpilib.simulation.restartTiming()

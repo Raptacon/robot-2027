@@ -195,8 +195,7 @@ class ManagedAnalog(NtMappingMixin):
             trigger_mode=self._trigger_mode,
             scale=self._scale,
             extra=self._extra,
-            action_name=(
-                self._action.qualified_name if self._action else ""),
+            action_name=(self._action.qualified_name if self._action else ""),
         )
 
     def _rebuild_slew_limiter(self) -> None:
@@ -219,11 +218,10 @@ class ManagedAnalog(NtMappingMixin):
             return
         try:
             from wpimath.filter import SlewRateLimiter
-            neg_rate = self._extra.get(
-                "negative_slew_rate", -self._slew_rate)
-            initial = getattr(self, '_last_slew_output', 0.0)
-            self._slew_limiter = SlewRateLimiter(
-                self._slew_rate, neg_rate, initial)
+
+            neg_rate = self._extra.get("negative_slew_rate", -self._slew_rate)
+            initial = getattr(self, "_last_slew_output", 0.0)
+            self._slew_limiter = SlewRateLimiter(self._slew_rate, neg_rate, initial)
         except ImportError:
             # Graceful degradation in test environments
             self._slew_limiter = None

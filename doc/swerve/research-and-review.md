@@ -39,6 +39,7 @@ class ModuleGearing:
     steer_ratio: float
     steer_inverted: bool
 
+
 MK4I = {
     "L1": ModuleGearing(8.14, 150 / 7, True),
     "L2": ModuleGearing(6.75, 150 / 7, True),
@@ -51,10 +52,11 @@ MK4 = {
     "L4": ModuleGearing(5.14, 12.8, False),
 }
 
+
 @dataclass(frozen=True)
 class DriveConfig:
     gearing: ModuleGearing = MK4I["L2"]
-    wheel_radius_m: float = 0.0508      # replace with measured value
+    wheel_radius_m: float = 0.0508  # replace with measured value
     drive_motor: DCMotor = DCMotor.NEO(1)
     # everything else (m/rot, max speed, kV) is derived from these
 ```

@@ -30,14 +30,17 @@ from utils.controller.model import (  # noqa: E402
 def _setup_plot():
     """Import matplotlib with non-interactive backend. Returns (plt, module)."""
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     return plt
 
 
 def _init_hal():
     """Initialize HAL for sim joystick access. Idempotent."""
     import hal
+
     try:
         hal.initialize(500, 0)
     except Exception:
@@ -82,9 +85,7 @@ def test_deadband_sweep():
     # Verify continuity at deadband boundary (no jump)
     for inp, out in zip(steps, outputs):
         if abs(abs(inp) - deadband) < 0.01:
-            assert abs(out) < 0.02, (
-                f"Expected near-zero at deadband edge, got {out} for input {inp}"
-            )
+            assert abs(out) < 0.02, f"Expected near-zero at deadband edge, got {out} for input {inp}"
 
     # Verify endpoints
     assert outputs[0] == pytest.approx(-1.0, abs=0.01)
@@ -129,10 +130,10 @@ def test_deadband_sweep_sim_joystick():
     # Sim raw axis indices: LX=0, LY=1, LT=2, RT=3, RX=4, RY=5
     test_cases = [
         # (action_name, input_name, sim_axis_index, deadband, invert, color)
-        ("test.lx_db0",   "left_stick_x",  0, 0.0,  False, "blue"),
-        ("test.ly_db005", "left_stick_y",  1, 0.05, True,  "green"),
-        ("test.rx_db01",  "right_stick_x", 4, 0.1,  False, "orange"),
-        ("test.ry_db05",  "right_stick_y", 5, 0.5,  True,  "red"),
+        ("test.lx_db0", "left_stick_x", 0, 0.0, False, "blue"),
+        ("test.ly_db005", "left_stick_y", 1, 0.05, True, "green"),
+        ("test.rx_db01", "right_stick_x", 4, 0.1, False, "orange"),
+        ("test.ry_db05", "right_stick_y", 5, 0.5, True, "red"),
     ]
 
     # Set up simulated joystick on port 0
@@ -161,7 +162,9 @@ def test_deadband_sweep_sim_joystick():
         actions=actions,
         controllers={
             0: ControllerConfig(
-                port=0, name="Driver", bindings=bindings,
+                port=0,
+                name="Driver",
+                bindings=bindings,
             )
         },
     )
@@ -207,14 +210,11 @@ def test_deadband_sweep_sim_joystick():
         for inp, out in zip(steps, outputs):
             if deadband > 0 and abs(inp) < deadband:
                 assert abs(out) < 1e-6, (
-                    f"{action_name}: expected 0 inside deadband "
-                    f"(db={deadband}), got {out} for input {inp}"
+                    f"{action_name}: expected 0 inside deadband (db={deadband}), got {out} for input {inp}"
                 )
         # Endpoints should reach +/-1 (deadband rescales to full range)
-        assert outputs[0] == pytest.approx(-1.0, abs=0.01), (
-            f"{action_name}: endpoint -1 failed: {outputs[0]}")
-        assert outputs[-1] == pytest.approx(1.0, abs=0.01), (
-            f"{action_name}: endpoint +1 failed: {outputs[-1]}")
+        assert outputs[0] == pytest.approx(-1.0, abs=0.01), f"{action_name}: endpoint -1 failed: {outputs[0]}"
+        assert outputs[-1] == pytest.approx(1.0, abs=0.01), f"{action_name}: endpoint +1 failed: {outputs[-1]}"
 
     # Graph — all 4 curves on one plot
     out_path = os.path.join(os.path.dirname(__file__), "deadband_sweep_sim.png")
@@ -222,8 +222,7 @@ def test_deadband_sweep_sim_joystick():
     ax.plot(steps, steps, "--", color="gray", alpha=0.4, label="No deadband (y=x)")
 
     for action_name, _, _, deadband, _, color in test_cases:
-        ax.plot(steps, all_outputs[action_name], "-o", markersize=2,
-                color=color, label=f"Deadband={deadband}")
+        ax.plot(steps, all_outputs[action_name], "-o", markersize=2, color=color, label=f"Deadband={deadband}")
 
     # Shade the largest deadband zone for visual reference
     ax.axvspan(-0.5, 0.5, alpha=0.06, color="red")
@@ -232,10 +231,7 @@ def test_deadband_sweep_sim_joystick():
 
     ax.set_xlabel("Raw joystick input (sim)")
     ax.set_ylabel("Shaped output (via InputFactory)")
-    ax.set_title(
-        "Sim Joystick Deadband Comparison\n"
-        "(4 axes, deadbands: 0, 0.05, 0.1, 0.5)"
-    )
+    ax.set_title("Sim Joystick Deadband Comparison\n(4 axes, deadbands: 0, 0.05, 0.1, 0.5)")
     ax.legend(loc="upper left")
     ax.grid(True, alpha=0.3)
     ax.set_xlim(-1.1, 1.1)

@@ -72,6 +72,7 @@ log = logging.getLogger("InputFactory")
 # Controller state
 # ---------------------------------------------------------------------------
 
+
 class ControllerState:
     """Internal state for a single controller port."""
 
@@ -85,16 +86,20 @@ class ControllerState:
             for action_name in action_list:
                 if action_name in self.action_to_input:
                     log.warning(
-                        "Action '%s' is bound to both '%s' and '%s' "
-                        "on controller %d — using '%s' (last wins)",
-                        action_name, self.action_to_input[action_name],
-                        input_name, port, input_name)
+                        "Action '%s' is bound to both '%s' and '%s' on controller %d — using '%s' (last wins)",
+                        action_name,
+                        self.action_to_input[action_name],
+                        input_name,
+                        port,
+                        input_name,
+                    )
                 self.action_to_input[action_name] = input_name
 
 
 # ---------------------------------------------------------------------------
 # ntproperty dynamic class creation
 # ---------------------------------------------------------------------------
+
 
 def make_analog_nt_class(nt_path: str, action: ActionDefinition) -> type:
     """Create a ManagedAnalog subclass with NT entries for this action.
@@ -125,27 +130,16 @@ def make_analog_nt_class(nt_path: str, action: ActionDefinition) -> type:
     # values. To make these persistent in the future, switch to
     # writeDefault=False, persistent=True on a per-action basis.
     attrs = {
-        'nt_deadband': ntproperty(
-            f'{nt_path}/deadband', action.deadband, writeDefault=True),
-        'nt_inversion': ntproperty(
-            f'{nt_path}/inversion', action.inversion, writeDefault=True),
-        'nt_scale': ntproperty(
-            f'{nt_path}/scale', action.scale, writeDefault=True),
-        'nt_slew_rate': ntproperty(
-            f'{nt_path}/slew_rate', action.slew_rate, writeDefault=True),
-        'nt_is_bound': ntproperty(
-            f'{nt_path}/isBound', True, writeDefault=True),
-        'nt_trigger_mode': ntproperty(
-            f'{nt_path}/trigger_mode', action.trigger_mode.value,
-            writeDefault=True),
-        'nt_input_type': ntproperty(
-            f'{nt_path}/input_type', action.input_type.value,
-            writeDefault=True),
-        'nt_in_use': ntproperty(
-            f'{nt_path}/in_use', False, writeDefault=True),
+        "nt_deadband": ntproperty(f"{nt_path}/deadband", action.deadband, writeDefault=True),
+        "nt_inversion": ntproperty(f"{nt_path}/inversion", action.inversion, writeDefault=True),
+        "nt_scale": ntproperty(f"{nt_path}/scale", action.scale, writeDefault=True),
+        "nt_slew_rate": ntproperty(f"{nt_path}/slew_rate", action.slew_rate, writeDefault=True),
+        "nt_is_bound": ntproperty(f"{nt_path}/isBound", True, writeDefault=True),
+        "nt_trigger_mode": ntproperty(f"{nt_path}/trigger_mode", action.trigger_mode.value, writeDefault=True),
+        "nt_input_type": ntproperty(f"{nt_path}/input_type", action.input_type.value, writeDefault=True),
+        "nt_in_use": ntproperty(f"{nt_path}/in_use", False, writeDefault=True),
     }
-    return type('ManagedAnalog_' + action.qualified_name.replace('.', '_'),
-                (ManagedAnalog,), attrs)
+    return type("ManagedAnalog_" + action.qualified_name.replace(".", "_"), (ManagedAnalog,), attrs)
 
 
 def make_button_nt_class(nt_path: str, action: ActionDefinition) -> type:
@@ -163,22 +157,14 @@ def make_button_nt_class(nt_path: str, action: ActionDefinition) -> type:
         return ManagedButton
 
     attrs = {
-        'nt_is_bound': ntproperty(
-            f'{nt_path}/isBound', True, writeDefault=True),
-        'nt_trigger_mode': ntproperty(
-            f'{nt_path}/trigger_mode', action.trigger_mode.value,
-            writeDefault=True),
-        'nt_input_type': ntproperty(
-            f'{nt_path}/input_type', action.input_type.value,
-            writeDefault=True),
-        'nt_in_use': ntproperty(
-            f'{nt_path}/in_use', False, writeDefault=True),
+        "nt_is_bound": ntproperty(f"{nt_path}/isBound", True, writeDefault=True),
+        "nt_trigger_mode": ntproperty(f"{nt_path}/trigger_mode", action.trigger_mode.value, writeDefault=True),
+        "nt_input_type": ntproperty(f"{nt_path}/input_type", action.input_type.value, writeDefault=True),
+        "nt_in_use": ntproperty(f"{nt_path}/in_use", False, writeDefault=True),
     }
     if action.input_type == InputType.BOOLEAN_TRIGGER:
-        attrs['nt_threshold'] = ntproperty(
-            f'{nt_path}/threshold', action.threshold, writeDefault=True)
-    return type('ManagedButton_' + action.qualified_name.replace('.', '_'),
-                (ManagedButton,), attrs)
+        attrs["nt_threshold"] = ntproperty(f"{nt_path}/threshold", action.threshold, writeDefault=True)
+    return type("ManagedButton_" + action.qualified_name.replace(".", "_"), (ManagedButton,), attrs)
 
 
 def make_rumble_nt_class(nt_path: str, action: ActionDefinition) -> type:
@@ -194,21 +180,17 @@ def make_rumble_nt_class(nt_path: str, action: ActionDefinition) -> type:
         return ManagedRumble
 
     attrs = {
-        'nt_is_bound': ntproperty(
-            f'{nt_path}/isBound', True, writeDefault=True),
-        'nt_input_type': ntproperty(
-            f'{nt_path}/input_type', action.input_type.value,
-            writeDefault=True),
-        'nt_in_use': ntproperty(
-            f'{nt_path}/in_use', False, writeDefault=True),
+        "nt_is_bound": ntproperty(f"{nt_path}/isBound", True, writeDefault=True),
+        "nt_input_type": ntproperty(f"{nt_path}/input_type", action.input_type.value, writeDefault=True),
+        "nt_in_use": ntproperty(f"{nt_path}/in_use", False, writeDefault=True),
     }
-    return type('ManagedRumble_' + action.qualified_name.replace('.', '_'),
-                (ManagedRumble,), attrs)
+    return type("ManagedRumble_" + action.qualified_name.replace(".", "_"), (ManagedRumble,), attrs)
 
 
 # ---------------------------------------------------------------------------
 # NT sync helpers
 # ---------------------------------------------------------------------------
+
 
 def sync_analog_nt(analog: ManagedAnalog) -> None:
     """Sync NT values into a ManagedAnalog's local properties.
@@ -217,27 +199,27 @@ def sync_analog_nt(analog: ManagedAnalog) -> None:
     handled separately by the managed object's ``_sync_custom_maps()``
     method, which reads from the user-specified NT path instead.
     """
-    if not hasattr(analog, 'nt_deadband'):
+    if not hasattr(analog, "nt_deadband"):
         return
 
     mapped = analog.mapped_params
 
-    if 'deadband' not in mapped:
+    if "deadband" not in mapped:
         nt_db = analog.nt_deadband
         if nt_db != analog.deadband:
             analog.deadband = nt_db
 
-    if 'inversion' not in mapped:
+    if "inversion" not in mapped:
         nt_inv = analog.nt_inversion
         if nt_inv != analog.inversion:
             analog.inversion = nt_inv
 
-    if 'scale' not in mapped:
+    if "scale" not in mapped:
         nt_sc = analog.nt_scale
         if nt_sc != analog.scale:
             analog.scale = nt_sc
 
-    if 'slew_rate' not in mapped:
+    if "slew_rate" not in mapped:
         nt_sr = analog.nt_slew_rate
         if nt_sr != analog.slew_rate:
             analog.slew_rate = nt_sr
@@ -248,11 +230,11 @@ def sync_button_nt(btn: ManagedButton) -> None:
 
     Skips parameters that have active custom NT mappings.
     """
-    if not hasattr(btn, 'nt_threshold'):
+    if not hasattr(btn, "nt_threshold"):
         return
 
     mapped = btn.mapped_params
-    if 'threshold' in mapped:
+    if "threshold" in mapped:
         return
 
     nt_thresh = btn.nt_threshold
@@ -263,6 +245,7 @@ def sync_button_nt(btn: ManagedButton) -> None:
 # ---------------------------------------------------------------------------
 # HID accessor builders
 # ---------------------------------------------------------------------------
+
 
 def _is_connected(port: int) -> bool:
     """Check if a joystick is connected (avoids per-cycle warning spam)."""
@@ -297,26 +280,18 @@ def make_button_condition(
 
     elif category == "pov":
         target_angle = POV_ANGLE_MAP[input_name]
-        return lambda: (
-            ctrl.getPOV() == target_angle
-            if _is_connected(port) else False)
+        return lambda: ctrl.getPOV() == target_angle if _is_connected(port) else False
 
     elif category == "axis":
         # BOOLEAN_TRIGGER — axis > threshold = True
         axis_fn = AXIS_ACCESSORS[input_name]
         if threshold_ref is not None:
-            return lambda: (
-                axis_fn(ctrl) > threshold_ref[0]
-                if _is_connected(port) else False)
+            return lambda: axis_fn(ctrl) > threshold_ref[0] if _is_connected(port) else False
         threshold = action.threshold
-        return lambda: (
-            axis_fn(ctrl) > threshold
-            if _is_connected(port) else False)
+        return lambda: axis_fn(ctrl) > threshold if _is_connected(port) else False
 
     else:
-        log.error(
-            "Cannot make button condition for '%s' "
-            "(category: %s)", input_name, category)
+        log.error("Cannot make button condition for '%s' (category: %s)", input_name, category)
         return lambda: False
 
 
@@ -340,20 +315,14 @@ def make_axis_accessor(
     # Allow buttons to be read as 0.0/1.0 for edge cases
     elif category == "button":
         accessor = BUTTON_ACCESSORS[input_name]
-        return lambda: (
-            (1.0 if accessor(ctrl) else 0.0)
-            if _is_connected(port) else 0.0)
+        return lambda: (1.0 if accessor(ctrl) else 0.0) if _is_connected(port) else 0.0
 
     elif category == "pov":
         target_angle = POV_ANGLE_MAP[input_name]
-        return lambda: (
-            (1.0 if ctrl.getPOV() == target_angle else 0.0)
-            if _is_connected(port) else 0.0)
+        return lambda: (1.0 if ctrl.getPOV() == target_angle else 0.0) if _is_connected(port) else 0.0
 
     else:
-        log.error(
-            "Cannot make axis accessor for '%s' "
-            "(category: %s)", input_name, category)
+        log.error("Cannot make axis accessor for '%s' (category: %s)", input_name, category)
         return lambda: 0.0
 
 
@@ -369,10 +338,12 @@ def make_output_setter(
         setter = OUTPUT_ACCESSORS[input_name]
         ctrl = state.controller
         port = state.port
+
         def _set_rumble(v):
             if _is_connected(port):
                 log.debug("Rumble '%s' port=%d -> %.2f", input_name, port, v)
                 setter(ctrl, v)
+
         return _set_rumble
 
     log.error("'%s' is not a rumble output", input_name)
@@ -400,6 +371,7 @@ def publish_bindings_nt(
     try:
         from ntcore.util import ntproperty  # noqa: F401
         import ntcore
+
         inst = ntcore.NetworkTableInstance.getDefault()
         table = inst.getTable(f"{nt_base}/bindings")
 
@@ -407,8 +379,7 @@ def publish_bindings_nt(
             ctrl_name = state.config.name or f"port{state.port}"
             for input_name, actions in state.config.bindings.items():
                 for action_name in actions:
-                    table.getSubTable(ctrl_name).getSubTable(
-                        input_name).putString("action", action_name)
+                    table.getSubTable(ctrl_name).getSubTable(input_name).putString("action", action_name)
     except ImportError:
         pass  # ntcore unavailable outside robot environment
 
@@ -422,6 +393,7 @@ def publish_config_metadata(
 
     try:
         import ntcore
+
         inst = ntcore.NetworkTableInstance.getDefault()
         table = inst.getTable(f"{nt_base}/config")
 
@@ -430,8 +402,7 @@ def publish_config_metadata(
         for f in config_files:
             paths.append(str(f))
             try:
-                hashes.append(
-                    hashlib.sha256(f.read_bytes()).hexdigest())
+                hashes.append(hashlib.sha256(f.read_bytes()).hexdigest())
             except OSError:
                 hashes.append("error")
 

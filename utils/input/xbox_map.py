@@ -20,15 +20,15 @@ import wpilib
 # cause missed events.
 
 BUTTON_ACCESSORS: dict[str, Callable[[wpilib.XboxController], bool]] = {
-    "a_button":           lambda c: c.getAButton(),
-    "b_button":           lambda c: c.getBButton(),
-    "x_button":           lambda c: c.getXButton(),
-    "y_button":           lambda c: c.getYButton(),
-    "left_bumper":        lambda c: c.getLeftBumper(),
-    "right_bumper":       lambda c: c.getRightBumper(),
-    "back_button":        lambda c: c.getBackButton(),
-    "start_button":       lambda c: c.getStartButton(),
-    "left_stick_button":  lambda c: c.getLeftStickButton(),
+    "a_button": lambda c: c.getAButton(),
+    "b_button": lambda c: c.getBButton(),
+    "x_button": lambda c: c.getXButton(),
+    "y_button": lambda c: c.getYButton(),
+    "left_bumper": lambda c: c.getLeftBumper(),
+    "right_bumper": lambda c: c.getRightBumper(),
+    "back_button": lambda c: c.getBackButton(),
+    "start_button": lambda c: c.getStartButton(),
+    "left_stick_button": lambda c: c.getLeftStickButton(),
     "right_stick_button": lambda c: c.getRightStickButton(),
 }
 
@@ -37,11 +37,11 @@ BUTTON_ACCESSORS: dict[str, Callable[[wpilib.XboxController], bool]] = {
 # Each maps input_name -> callable(controller) -> float
 
 AXIS_ACCESSORS: dict[str, Callable[[wpilib.XboxController], float]] = {
-    "left_stick_x":  lambda c: c.getLeftX(),
-    "left_stick_y":  lambda c: c.getLeftY(),
+    "left_stick_x": lambda c: c.getLeftX(),
+    "left_stick_y": lambda c: c.getLeftY(),
     "right_stick_x": lambda c: c.getRightX(),
     "right_stick_y": lambda c: c.getRightY(),
-    "left_trigger":  lambda c: c.getLeftTriggerAxis(),
+    "left_trigger": lambda c: c.getLeftTriggerAxis(),
     "right_trigger": lambda c: c.getRightTriggerAxis(),
 }
 
@@ -50,29 +50,24 @@ AXIS_ACCESSORS: dict[str, Callable[[wpilib.XboxController], float]] = {
 # Maps input_name -> angle in degrees (-1 = not pressed)
 
 POV_ANGLE_MAP: dict[str, int] = {
-    "pov_up":         0,
-    "pov_up_right":   45,
-    "pov_right":      90,
+    "pov_up": 0,
+    "pov_up_right": 45,
+    "pov_right": 90,
     "pov_down_right": 135,
-    "pov_down":       180,
-    "pov_down_left":  225,
-    "pov_left":       270,
-    "pov_up_left":    315,
+    "pov_down": 180,
+    "pov_down_left": 225,
+    "pov_left": 270,
+    "pov_up_left": 315,
 }
 
 
 # --- Outputs (3) ---
 # Each maps output_name -> callable(controller, value) -> None
 
-OUTPUT_ACCESSORS: dict[
-    str, Callable[[wpilib.XboxController, float], None]
-] = {
-    "rumble_left": lambda c, v: c.setRumble(
-        wpilib.XboxController.RumbleType.kLeftRumble, v),
-    "rumble_right": lambda c, v: c.setRumble(
-        wpilib.XboxController.RumbleType.kRightRumble, v),
-    "rumble_both": lambda c, v: c.setRumble(
-        wpilib.XboxController.RumbleType.kBothRumble, v),
+OUTPUT_ACCESSORS: dict[str, Callable[[wpilib.XboxController, float], None]] = {
+    "rumble_left": lambda c, v: c.setRumble(wpilib.XboxController.RumbleType.kLeftRumble, v),
+    "rumble_right": lambda c, v: c.setRumble(wpilib.XboxController.RumbleType.kRightRumble, v),
+    "rumble_both": lambda c, v: c.setRumble(wpilib.XboxController.RumbleType.kBothRumble, v),
 }
 
 
@@ -83,47 +78,42 @@ OUTPUT_ACCESSORS: dict[
 
 HID_CHANNEL: dict[str, int] = {
     # Axes (GenericHID axis index)
-    "left_stick_x":  0,
-    "left_stick_y":  1,
-    "left_trigger":  2,
+    "left_stick_x": 0,
+    "left_stick_y": 1,
+    "left_trigger": 2,
     "right_trigger": 3,
     "right_stick_x": 4,
     "right_stick_y": 5,
     # Buttons (1-based)
-    "a_button":           1,
-    "b_button":           2,
-    "x_button":           3,
-    "y_button":           4,
-    "left_bumper":        5,
-    "right_bumper":       6,
-    "back_button":        7,
-    "start_button":       8,
-    "left_stick_button":  9,
+    "a_button": 1,
+    "b_button": 2,
+    "x_button": 3,
+    "y_button": 4,
+    "left_bumper": 5,
+    "right_bumper": 6,
+    "back_button": 7,
+    "start_button": 8,
+    "left_stick_button": 9,
     "right_stick_button": 10,
     # POV (angle in degrees)
-    "pov_up":         0,
-    "pov_up_right":   45,
-    "pov_right":      90,
+    "pov_up": 0,
+    "pov_up_right": 45,
+    "pov_right": 90,
     "pov_down_right": 135,
-    "pov_down":       180,
-    "pov_down_left":  225,
-    "pov_left":       270,
-    "pov_up_left":    315,
+    "pov_down": 180,
+    "pov_down_left": 225,
+    "pov_left": 270,
+    "pov_up_left": 315,
     # Outputs (rumble type ordinal)
-    "rumble_left":  0,
+    "rumble_left": 0,
     "rumble_right": 1,
-    "rumble_both":  2,
+    "rumble_both": 2,
 }
 
 
 # --- Aggregate sets (exported for use by validation.py) ---
 
-ALL_INPUT_NAMES: set[str] = (
-    set(BUTTON_ACCESSORS)
-    | set(AXIS_ACCESSORS)
-    | set(POV_ANGLE_MAP)
-    | set(OUTPUT_ACCESSORS)
-)
+ALL_INPUT_NAMES: set[str] = set(BUTTON_ACCESSORS) | set(AXIS_ACCESSORS) | set(POV_ANGLE_MAP) | set(OUTPUT_ACCESSORS)
 
 
 def get_input_category(name: str) -> str | None:

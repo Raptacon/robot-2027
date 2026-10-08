@@ -89,10 +89,11 @@ class NtMappingMixin:
         """
         if param not in self._PARAM_TYPES:
             log.error(
-                "Invalid param '%s' for %s.mapParamToNtPath. "
-                "Valid params: %s",
-                param, type(self).__name__,
-                list(self._PARAM_TYPES.keys()))
+                "Invalid param '%s' for %s.mapParamToNtPath. Valid params: %s",
+                param,
+                type(self).__name__,
+                list(self._PARAM_TYPES.keys()),
+            )
             return False
 
         error = self._validate_param(param)
@@ -135,8 +136,7 @@ class NtMappingMixin:
             True if a mapping was removed, False if none existed.
         """
         if param not in self._custom_nt_maps:
-            log.warning(
-                "No custom NT mapping for param '%s' to unmap", param)
+            log.warning("No custom NT mapping for param '%s' to unmap", param)
             return False
 
         nt_path = self._custom_nt_maps[param][0]
@@ -151,9 +151,7 @@ class NtMappingMixin:
         auto-generated NT properties during subsequent scheduler cycles.
         """
         if self._custom_nt_maps:
-            log.info(
-                "Clearing %d custom NT mapping(s)",
-                len(self._custom_nt_maps))
+            log.info("Clearing %d custom NT mapping(s)", len(self._custom_nt_maps))
         self._custom_nt_maps.clear()
 
     def _sync_custom_maps(self) -> None:
@@ -164,8 +162,7 @@ class NtMappingMixin:
         only when the value has actually changed (to avoid unnecessary
         pipeline rebuilds).
         """
-        for param, (_nt_path, entry, expected_type) in (
-                self._custom_nt_maps.items()):
+        for param, (_nt_path, entry, expected_type) in self._custom_nt_maps.items():
             current = self._get_param_value(param)
             if expected_type is float:
                 nt_val = entry.getDouble(float(current))

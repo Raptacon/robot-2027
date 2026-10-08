@@ -82,6 +82,7 @@ _STEP_PERIOD = (MyRobot.kDefaultPeriod / 1000) - 0.001
 # Controller input snapshot
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class ControllerInputs:
     """Snapshot of all 17 Xbox controller inputs.
@@ -90,6 +91,7 @@ class ControllerInputs:
     in time. Sticks and triggers are floats, buttons are booleans, and
     the POV (D-pad) is an angle in degrees or -1 when not pressed.
     """
+
     # Analog axes (range -1.0 to 1.0, triggers 0.0 to 1.0)
     left_x: float = 0.0
     left_y: float = 0.0
@@ -150,15 +152,25 @@ def apply_inputs(sim: XboxControllerSim, inputs: ControllerInputs):
 _POV_VALUES = [-1, 0, 45, 90, 135, 180, 225, 270, 315]
 
 _BUTTON_FIELDS = [
-    "a", "b", "x", "y",
-    "left_bumper", "right_bumper",
-    "back", "start",
-    "left_stick", "right_stick",
+    "a",
+    "b",
+    "x",
+    "y",
+    "left_bumper",
+    "right_bumper",
+    "back",
+    "start",
+    "left_stick",
+    "right_stick",
 ]
 
 _AXIS_FIELDS = [
-    "left_x", "left_y", "right_x", "right_y",
-    "left_trigger", "right_trigger",
+    "left_x",
+    "left_y",
+    "right_x",
+    "right_y",
+    "left_trigger",
+    "right_trigger",
 ]
 
 _TRIGGER_AXES = {"left_trigger", "right_trigger"}
@@ -182,6 +194,7 @@ class FuzzInputGenerator:
     - The extreme_bias parameter (0.0 to 1.0) controls how often
       "extreme" mode is forced. Set to 1.0 to ONLY test boundary values.
     """
+
     seed: int
     num_controllers: int = 2
     button_change_prob: float = 0.30
@@ -249,6 +262,7 @@ class FuzzInputGenerator:
 # ---------------------------------------------------------------------------
 # Shared test runner
 # ---------------------------------------------------------------------------
+
 
 def _run_fuzz(
     control,
@@ -319,9 +333,7 @@ def _run_fuzz(
             DriverStationSim.notifyNewData()
             wpilib.simulation.stepTiming(_STEP_PERIOD)
 
-            assert control.robot_is_alive, (
-                f"Robot died during teleop fuzz cycle {cycle} (seed={seed})"
-            )
+            assert control.robot_is_alive, f"Robot died during teleop fuzz cycle {cycle} (seed={seed})"
 
         # Phase 4: Disabled cool-down
         control.step_timing(seconds=0.5, autonomous=False, enabled=False)
@@ -330,6 +342,7 @@ def _run_fuzz(
 # ---------------------------------------------------------------------------
 # Test cases
 # ---------------------------------------------------------------------------
+
 
 def test_fuzz_teleop_default(control):
     """Standard fuzz with the full match flow: disabled -> auto -> teleop.

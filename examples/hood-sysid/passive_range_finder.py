@@ -53,19 +53,16 @@ class PassiveRangeFinderCommand(Command):
         self._reverse_limit_position = 0.0
 
         # NT table
-        self._table = ntcore.NetworkTableInstance.getDefault().getTable(
-            f"PassiveRangeFinder/{name}")
+        self._table = ntcore.NetworkTableInstance.getDefault().getTable(f"PassiveRangeFinder/{name}")
 
         # Alerts
         self._fwd_alert = wpilib.Alert(
-            f"PassiveRangeFinder/{name}: Forward hard limit hit",
-            wpilib.Alert.AlertType.kWarning)
+            f"PassiveRangeFinder/{name}: Forward hard limit hit", wpilib.Alert.AlertType.kWarning
+        )
         self._rev_alert = wpilib.Alert(
-            f"PassiveRangeFinder/{name}: Reverse hard limit hit",
-            wpilib.Alert.AlertType.kWarning)
-        self._result_alert = wpilib.Alert(
-            f"PassiveRangeFinder/{name}: Results pending",
-            wpilib.Alert.AlertType.kInfo)
+            f"PassiveRangeFinder/{name}: Reverse hard limit hit", wpilib.Alert.AlertType.kWarning
+        )
+        self._result_alert = wpilib.Alert(f"PassiveRangeFinder/{name}: Results pending", wpilib.Alert.AlertType.kInfo)
 
     def initialize(self) -> None:
         """Save config, set coast mode, start tracking."""
@@ -73,24 +70,15 @@ class PassiveRangeFinderCommand(Command):
 
         # Save original config
         self._original_idle_mode = ca.getIdleMode()
-        self._original_conversion_factor = (
-            ca.encoder.getPositionConversionFactor())
+        self._original_conversion_factor = ca.encoder.getPositionConversionFactor()
 
         # Set conversion factor to 1.0 for raw encoder units, coast mode
         # position: 1.0 = raw rotations
         # velocity: 1/60 = rotations/sec (from RPM)
         cfg = rev.SparkMaxConfig()
         cfg.setIdleMode(rev.SparkBaseConfig.IdleMode.kCoast)
-        (
-            cfg.encoder
-            .positionConversionFactor(1.0)
-            .velocityConversionFactor(1.0 / 60.0)
-        )
-        self.motor.configure(
-            cfg,
-            rev.ResetMode.kNoResetSafeParameters,
-            rev.PersistMode.kNoPersistParameters
-        )
+        (cfg.encoder.positionConversionFactor(1.0).velocityConversionFactor(1.0 / 60.0))
+        self.motor.configure(cfg, rev.ResetMode.kNoResetSafeParameters, rev.PersistMode.kNoPersistParameters)
 
         # Zero encoder and reset tracking
         self.encoder.setPosition(0)
@@ -111,8 +99,7 @@ class PassiveRangeFinderCommand(Command):
         # Initialize NT entries
         self._publish_nt(pos)
 
-        print(f"[PassiveRangeFinder/{self._name}] Started. "
-              f"Move mechanism through its range, then press button again.")
+        print(f"[PassiveRangeFinder/{self._name}] Started. Move mechanism through its range, then press button again.")
 
     def execute(self) -> None:
         """Track min/max position and check limit switches."""
@@ -125,25 +112,25 @@ class PassiveRangeFinderCommand(Command):
             self._max_raw = pos
 
         # Check forward limit switch
-        if (not self._hit_forward_limit
-                and self.motor.getForwardLimitSwitch().get()):
+        if not self._hit_forward_limit and self.motor.getForwardLimitSwitch().get():
             self._hit_forward_limit = True
             self._forward_limit_position = pos
             self._fwd_alert.setText(
                 f"PassiveRangeFinder/{self._name}: Forward hard limit "
                 f"at raw={pos:.4f} "
-                f"normalized={pos * self._original_conversion_factor:.2f}")
+                f"normalized={pos * self._original_conversion_factor:.2f}"
+            )
             self._fwd_alert.set(True)
 
         # Check reverse limit switch
-        if (not self._hit_reverse_limit
-                and self.motor.getReverseLimitSwitch().get()):
+        if not self._hit_reverse_limit and self.motor.getReverseLimitSwitch().get():
             self._hit_reverse_limit = True
             self._reverse_limit_position = pos
             self._rev_alert.setText(
                 f"PassiveRangeFinder/{self._name}: Reverse hard limit "
                 f"at raw={pos:.4f} "
-                f"normalized={pos * self._original_conversion_factor:.2f}")
+                f"normalized={pos * self._original_conversion_factor:.2f}"
+            )
             self._rev_alert.set(True)
 
         self._publish_nt(pos)
@@ -156,10 +143,8 @@ class PassiveRangeFinderCommand(Command):
         cfg.setIdleMode(self._original_idle_mode)
 
         # Determine best limits in raw encoder units
-        fwd_raw = (self._forward_limit_position
-                   if self._hit_forward_limit else self._max_raw)
-        rev_raw = (self._reverse_limit_position
-                   if self._hit_reverse_limit else self._min_raw)
+        fwd_raw = self._forward_limit_position if self._hit_forward_limit else self._max_raw
+        rev_raw = self._reverse_limit_position if self._hit_reverse_limit else self._min_raw
 
         # Offset relative to current position when zeroing
         current_raw = self.encoder.getPosition()
@@ -182,27 +167,21 @@ class PassiveRangeFinderCommand(Command):
 
         # position: cf units/rotation (deg or normalized)
         # velocity: cf/60 = units/sec (from RPM)
-        (
-            cfg.encoder
-            .positionConversionFactor(cf)
-            .velocityConversionFactor(cf / 60.0)
-        )
+        (cfg.encoder.positionConversionFactor(cf).velocityConversionFactor(cf / 60.0))
 
         # Apply soft limits in the new units
         fwd_scaled = fwd_raw * cf
         rev_scaled = rev_raw * cf
 
         (
-            cfg.softLimit
-            .forwardSoftLimit(fwd_scaled)
+            cfg.softLimit.forwardSoftLimit(fwd_scaled)
             .forwardSoftLimitEnabled(True)
             .reverseSoftLimit(rev_scaled)
             .reverseSoftLimitEnabled(True)
         )
 
         elapsed = wpilib.Timer.getFPGATimestamp() - self._start_time
-        unit = ("deg" if self._full_range is not None
-                else "normalized")
+        unit = "deg" if self._full_range is not None else "normalized"
 
         summary = (
             f"[PassiveRangeFinder/{self._name}] Complete.\n"
@@ -212,8 +191,7 @@ class PassiveRangeFinderCommand(Command):
             f"  Soft limits: [{rev_scaled:.2f}, {fwd_scaled:.2f}] {unit}"
         )
         if self._zero_on_end:
-            summary += (
-                f"\n  Zeroed at raw={current_raw:.4f}")
+            summary += f"\n  Zeroed at raw={current_raw:.4f}"
         summary += (
             f"\n  Forward limit hit: {self._hit_forward_limit}\n"
             f"  Reverse limit hit: {self._hit_reverse_limit}\n"
@@ -222,22 +200,22 @@ class PassiveRangeFinderCommand(Command):
         print(summary)
 
         limits_str = (
-            'fwd+rev' if self._hit_forward_limit
-            and self._hit_reverse_limit
-            else 'fwd' if self._hit_forward_limit
-            else 'rev' if self._hit_reverse_limit
-            else 'none')
+            "fwd+rev"
+            if self._hit_forward_limit and self._hit_reverse_limit
+            else "fwd"
+            if self._hit_forward_limit
+            else "rev"
+            if self._hit_reverse_limit
+            else "none"
+        )
         self._result_alert.setText(
             f"PassiveRangeFinder/{self._name}: "
             f"range=[{rev_scaled:.2f}, {fwd_scaled:.2f}] {unit} "
-            f"hardLimits={limits_str}")
+            f"hardLimits={limits_str}"
+        )
         self._result_alert.set(True)
 
-        self.motor.configure(
-            cfg,
-            rev.ResetMode.kNoResetSafeParameters,
-            rev.PersistMode.kNoPersistParameters
-        )
+        self.motor.configure(cfg, rev.ResetMode.kNoResetSafeParameters, rev.PersistMode.kNoPersistParameters)
 
         # Zero the encoder after config is applied so soft limits
         # are relative to the new zero position.
@@ -246,8 +224,7 @@ class PassiveRangeFinderCommand(Command):
 
         # Tell the subsystem to hold at current position so its
         # periodic PID doesn't drive back to the old target.
-        if hasattr(self._subsystem, 'disable') and callable(
-                self._subsystem.disable):
+        if hasattr(self._subsystem, "disable") and callable(self._subsystem.disable):
             self._subsystem.disable()
 
         # Final NT update

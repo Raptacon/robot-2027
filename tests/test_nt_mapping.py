@@ -52,8 +52,8 @@ def _make_action(
 
 # --- ManagedAnalog param validation ---
 
-class TestAnalogParamValidation:
 
+class TestAnalogParamValidation:
     def test_valid_params_list(self):
         """All expected params are in the valid set."""
         assert "deadband" in ManagedAnalog._PARAM_TYPES
@@ -90,8 +90,8 @@ class TestAnalogParamValidation:
 
 # --- ManagedButton param validation ---
 
-class TestButtonParamValidation:
 
+class TestButtonParamValidation:
     def test_valid_params_list(self):
         assert "threshold" in ManagedButton._PARAM_TYPES
 
@@ -115,6 +115,7 @@ class TestButtonParamValidation:
 
 
 # --- NT integration tests (require ntcore) ---
+
 
 class TestAnalogNtMapping:
     """Integration tests using real ntcore entries."""
@@ -280,8 +281,7 @@ class TestButtonNtMapping:
         return f"/test_btn_mapping/{self._test_id}/{suffix}"
 
     def test_map_threshold_on_boolean_trigger(self):
-        action = _make_action(
-            input_type=InputType.BOOLEAN_TRIGGER, threshold=0.5)
+        action = _make_action(input_type=InputType.BOOLEAN_TRIGGER, threshold=0.5)
         btn = ManagedButton(action, lambda: False)
         path = self._nt_path("threshold")
 
@@ -290,8 +290,7 @@ class TestButtonNtMapping:
         assert "threshold" in btn.mapped_params
 
     def test_unmap_threshold(self):
-        action = _make_action(
-            input_type=InputType.BOOLEAN_TRIGGER, threshold=0.5)
+        action = _make_action(input_type=InputType.BOOLEAN_TRIGGER, threshold=0.5)
         btn = ManagedButton(action, lambda: False)
         path = self._nt_path("threshold_unmap")
 
@@ -301,8 +300,7 @@ class TestButtonNtMapping:
         assert "threshold" not in btn.mapped_params
 
     def test_clear_maps(self):
-        action = _make_action(
-            input_type=InputType.BOOLEAN_TRIGGER, threshold=0.5)
+        action = _make_action(input_type=InputType.BOOLEAN_TRIGGER, threshold=0.5)
         btn = ManagedButton(action, lambda: False)
 
         btn.mapParamToNtPath(self._nt_path("t"), "threshold")
