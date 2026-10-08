@@ -22,6 +22,7 @@ Example:
 """
 
 from collections import deque
+from collections.abc import Callable
 
 from subsystem.drivetrain.io.gyro_io import GyroInputs, GyroIO
 
@@ -36,6 +37,10 @@ class GyroIOSim(GyroIO):
         never_connects: ``True`` to simulate an unplugged gyro.
         drift_rad_per_s: Yaw drift added while the robot sits still, in
             radians per second. 1 degree per minute is about 0.0003 rad/s.
+        before_update: A function called at the start of each
+            :meth:`update_inputs`. :class:`~subsystem.drivetrain.drivetrain_sim.DrivetrainSim`
+            uses it to call :meth:`step` with the robot's true motion just
+            before the gyro is read, so the gyro and wheels agree in time.
     """
 
     def __init__(
@@ -44,10 +49,12 @@ class GyroIOSim(GyroIO):
         boot_delay_loops: int = 0,
         never_connects: bool = False,
         drift_rad_per_s: float = 0.0,
+        before_update: Callable[[], None] | None = None,
     ) -> None:
         self._boot_delay_loops = boot_delay_loops
         self._never_connects = never_connects
         self._drift_rad_per_s = drift_rad_per_s
+        self._before_update = before_update
         self._loops = 0
         self._yaw_rad = 0.0
         self._true_yaw_rad = 0.0
@@ -67,6 +74,8 @@ class GyroIOSim(GyroIO):
         return self._true_yaw_rad
 
     def update_inputs(self, inputs: GyroInputs) -> None:
+        if self._before_update is not None:
+            self._before_update()
         self._loops += 1
         connected = not self._never_connects and self._loops > self._boot_delay_loops
         if connected:

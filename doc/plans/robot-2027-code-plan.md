@@ -124,8 +124,10 @@ subsystem/drivetrain/
     gyro_io.py           # GyroIO interface
     gyro_io_navx.py
     gyro_io_sim.py
+  swerve_math.py         # pure-Python kinematics, discretize, desaturate, optimize (same on 2026 and 2027)
   module.py              # optimize, cosine scale, feedforward, seeding + health checks
   drivetrain.py          # kinematics, discretize, desaturate, odometry, pose estimator, PathPlanner, SysId
+  drivetrain_sim.py      # builds a sim drivetrain and tracks the true pose for tests
   odometry_sampler.py    # swappable: once per loop now, thread later
 commands/drive/
   teleop_drive.py        # radial deadband, shaping, slew, field-relative, heading lock

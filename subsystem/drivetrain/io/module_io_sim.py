@@ -70,8 +70,8 @@ class ModuleSimOptions:
     actual_wheel_radius_m: float | None = None
     drive_tau_s: float = 0.15
     steer_tau_s: float = 0.01
-    drive_kp: float = 1.0
-    steer_kp: float = 10.0
+    drive_kp: float = 4.0
+    steer_kp: float = 40.0
     steer_kd: float = 0.0
     loop_period_s: float = 0.02
     substeps: int = 20
