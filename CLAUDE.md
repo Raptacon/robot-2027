@@ -53,7 +53,7 @@ Code is formatted with `ruff format` and linted with `ruff check`; settings live
 
 ### Entry Point & Robot Lifecycle
 
-`robot.py` defines `MyRobot(commands2.TimedCommandRobot)` running at 50 Hz (20 ms period). On `main` it only sets up logging (wpilog via `DataLogManager`, Python logging via `utils/datalog_bridge.py`), loop timing (`utils/loop_timing.py`, published under `/FrameTiming/` at 10 Hz) and `HealthAndStatus` telemetry. The swerve drivetrain is added on the `swerve-dev` branch.
+`robot.py` defines `MyRobot(commands2.TimedCommandRobot)` running at 50 Hz (20 ms period). It sets up logging (wpilog via `DataLogManager`, Python logging via `utils/datalog_bridge.py`), loop timing (`utils/loop_timing.py`, published under `/FrameTiming/` at 10 Hz), `HealthAndStatus` telemetry, and the swerve `Drivetrain`. In simulation the drivetrain is built by `DrivetrainSim`; on the robot it is `None` until the hardware IO lands (M5).
 
 `MyRobot.callAndCatch` wraps calls to catch and log exceptions without crashing the robot on hardware (exceptions are re-raised in simulation so tests fail).
 
@@ -72,6 +72,15 @@ Code is formatted with `ruff format` and linted with `ruff check`; settings live
 ### Drivetrain IO (`subsystem/drivetrain/io/`)
 
 `ModuleIO`, `AbsoluteEncoderIO` and `GyroIO` are abstract interfaces, each with an inputs dataclass (`ModuleInputs`, `AbsoluteEncoderInputs`, `GyroInputs`) filled once per loop by `update_inputs()`. Sim versions (`module_io_sim.py`, `abs_encoder_sim.py`, `gyro_io_sim.py`) use the pure-Python `SimMotor` (kS/kV/kA model, no WPILib) and can add latency, boot delay, a dead sensor, offset error, gyro drift and gear or wheel mismatch for tests. The sim steer encoder reads 0 at boot like a real SparkMax, so code must seed it from the absolute encoder. `utils/inputs_publisher.py` publishes an inputs dataclass to NT (and so to the wpilog) every loop. Tests: `tests/drivetrain/test_io_sim.py`.
+
+### Drivetrain (`subsystem/drivetrain/`)
+
+- `swerve_math.py`: pure-Python kinematics (inverse, forward least-squares), `discretize`, `desaturate`, `optimize`, `cosine_scale`, `field_to_robot`, `pose_exp`. Uses its own `ChassisSpeeds`/`ModuleTarget` dataclasses so it is the same on RobotPy 2026 and 2027.
+- `module.py`: `SwerveModule` seeds the steer encoder from the absolute encoder on the first good reading, re-seeds while disabled if they disagree by more than 2 degrees, and flags `encoder_failed` (dashboard alert, wheel stopped) after `SEED_TIMEOUT_LOOPS`.
+- `drivetrain.py`: `Drivetrain(commands2.Subsystem)` reads modules then gyro each loop, keeps a continuous heading (falls back to wheel spin rate if the gyro drops out), runs WPILib's pose estimator and plain odometry, and logs struct-typed poses, module states and chassis speeds under `/Drive/`.
+- `drivetrain_sim.py`: `DrivetrainSim` builds a simulated drivetrain and tracks `true_pose` from each wheel's real motion; use it in tests.
+
+WPILib math classes that moved or were renamed in 2027 (geometry, kinematics, estimator) are imported from `utils/wpimath_compat.py`; alerts from `utils/alerts.py`. Use `wpilib.RobotState.isDisabled()` (not `DriverStation`), which exists in both versions.
 
 ### Controller Config (`utils/controller/`) and Input Factory (`utils/input/`)
 
