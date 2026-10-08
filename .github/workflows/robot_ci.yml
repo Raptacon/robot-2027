@@ -21,7 +21,7 @@ jobs:
 
     - name: Set up Python
       timeout-minutes: 2
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: 3.14.*
         cache: pip
@@ -61,7 +61,7 @@ jobs:
 
     - name: Set up Python
       timeout-minutes: 2
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: 3.14.*
         cache: pip
@@ -84,7 +84,7 @@ jobs:
 
     - name: Set up Python
       timeout-minutes: 2
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: 3.14.*
         cache: pip
@@ -115,7 +115,7 @@ jobs:
 
     - name: Set up Python
       timeout-minutes: 2
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: 3.14.*
         cache: pip
@@ -163,7 +163,7 @@ jobs:
 
     - name: Set up Python
       timeout-minutes: 2
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: 3.14.*
         cache: pip
@@ -186,7 +186,7 @@ jobs:
 
     - name: Set up Python
       timeout-minutes: 2
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: 3.14.*
         cache: pip
@@ -230,7 +230,7 @@ jobs:
 
     - name: Set up Python
       timeout-minutes: 2
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: 3.14.*
         cache: pip
