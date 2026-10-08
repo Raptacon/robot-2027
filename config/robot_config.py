@@ -133,6 +133,46 @@ class DriveFeedforward:
 
 
 @dataclass(frozen=True)
+class SparkSettings:
+    """Settings sent to every drive and steer SPARK MAX on each boot.
+
+    The code configures each controller from its defaults every time the
+    robot starts, so a swapped controller behaves exactly like the old one.
+    These are starting values from doc/swerve/tuning-and-calibration.md
+    section 2; tune from here and write down what you changed.
+
+    The PID gains use our units, because the controllers are set up to
+    count in meters and radians: a drive kP of 0.1 means "for each 1 m/s too
+    slow, add 10% of full output (1.2 V)".
+
+    Attributes:
+        drive_current_limit_amps: Drive motor current limit. Lower it if the
+            wheels slip or the battery browns out; raise it only if the robot
+            accelerates too slowly.
+        steer_current_limit_amps: Steer motor current limit.
+        drive_kp: Drive speed loop gain, fraction of full output per m/s of error.
+        steer_kp: Steer angle loop gain, fraction of full output per radian of error.
+        steer_kd: Steer angle loop damping, fraction of full output per rad/s.
+        encoder_period_ms: How often (ms) each controller sends its encoder
+            position and speed. Odometry needs a fresh value every 20 ms loop.
+
+    Example:
+        A stiffer steer loop for one robot:
+
+        >>> from config.robot_config import SparkSettings
+        >>> SparkSettings(steer_kp=0.8).steer_kp
+        0.8
+    """
+
+    drive_current_limit_amps: int = 40
+    steer_current_limit_amps: int = 20
+    drive_kp: float = 0.1
+    steer_kp: float = 0.5
+    steer_kd: float = 0.0
+    encoder_period_ms: int = 20
+
+
+@dataclass(frozen=True)
 class RobotConfig:
     """Everything the drive code needs to know about one robot's swerve.
 
@@ -155,6 +195,10 @@ class RobotConfig:
             Choosing a bus on SystemCore comes in milestone M8.
         drive_feedforward: The drive motors' :class:`DriveFeedforward`.
             Replace with SysId values in milestone M6.
+        spark: The :class:`SparkSettings` for every drive and steer controller.
+        systemcore_imu_mount: How SystemCore is mounted on the robot, for its
+            built-in IMU: ``"flat"``, ``"landscape"`` or ``"portrait"``
+            (WPILib's ``OnboardIMU.MountOrientation``). Not used on a roboRIO.
 
     The properties below are worked out from these values, so they always
     agree with each other. Don't copy them into the config by hand.
@@ -179,6 +223,8 @@ class RobotConfig:
     gyro_inverted: bool = False
     can_bus: str = ""
     drive_feedforward: DriveFeedforward = DriveFeedforward()
+    spark: SparkSettings = SparkSettings()
+    systemcore_imu_mount: str = "flat"
 
     @property
     def drive_m_per_motor_rot(self) -> float:
