@@ -8,7 +8,7 @@ We start robot-2027 as a new repo seeded with robot-2026's tooling (CI, requirem
 
 A raptacon org admin creates an empty `raptacon/robot-2027` (no README, no license, so the seed commit goes in cleanly) and gives Claude push access. Claude then pushes the seed commit and opens the swerve branch.
 
-Settings to turn on after the seed lands:
+Settings to turn on (branch protection is planned as part of M9; any of these can be done sooner):
 
 - [ ] Branch protection on `main`: require a PR, one CODEOWNERS review, and passing CI checks; no force pushes
 - [ ] Same protection on `swerve-dev` once it exists, minus the CODEOWNERS review so students can iterate faster
@@ -24,7 +24,7 @@ The rule: tooling, team infrastructure and game-independent utilities come over 
 | Item | Decision | Notes |
 | --- | --- | --- |
 | `.github/` workflows, PR and issue templates | Carry | CI changes in section 3 |
-| `CODEOWNERS`, `.flake8`, `.gitignore`, `LICENSE` | Carry | Review CODEOWNERS list for 2027 mentors |
+| `CODEOWNERS`, `.gitignore`, `LICENSE` | Carry (`.flake8` replaced by ruff config in `pyproject.toml`) | Review CODEOWNERS list for 2027 mentors |
 | `Makefile`, `Dockerfile`, `deploy.bat`, `deploy_utils/` | Carry | Rename the docker image tag from `raptacon2022_build` |
 | `pyproject.toml`, `requirements.txt`, `robot_requirements.txt` | Carry, trimmed | Keep robotpy 2026.\* for now (rev, phoenix6, navx, pathplannerlib, photonlibpy, urcl); drop `cryptography`, `py2app`, `macholib`, `modulegraph` until host tools return |
 | `CLAUDE.md`, `README.md` | Carry, rewritten | Architecture section rewritten for the new layout; keep build, test, NT and unit-test rules |
@@ -79,7 +79,10 @@ Keep robot-2026's pipeline as the base and add a few checks that would have caug
 | --- | --- | --- |
 | Unit and integration tests on Windows and macOS | Keep | Add Linux, the cheapest runner, and make it the required check |
 | Sim smoke test (5 s headless) | Keep | Run on Linux too; later extend to a scripted drive test |
-| flake8 critical (blocking) and extra (non-blocking) | Keep | Point both at `.flake8` so local and CI rules can't drift |
+| flake8 critical (blocking) and extra (non-blocking) | Replaced | Ruff lint and `ruff format --check` (blocking), rules in `pyproject.toml`, the same ones pre-commit runs on every commit |
+| Pre-commit hooks | Add | Ruff fix and format, YAML check, merge-conflict and large-file checks before each commit |
+| Type check (pyright) | Add, informational | Reports the error count as a warning until existing findings are fixed, then becomes blocking |
+| CI speed | Add | pip caching on every job; a new push cancels the superseded run |
 | pdoc docs build and GitHub Pages deploy | Keep |  |
 | Nightly scheduled run | Keep | Catches upstream package breaks |
 | Host tools release build | Phase 2 | Returns with the host tools (section 10) |
@@ -146,6 +149,9 @@ Each milestone ends with green CI and a merge of `swerve-dev` into `main`. M0 to
 7. **M6 Calibration and characterization:** offset calibration command, steer step test, drive SysId (on carpet, wheels locked at 0°), steer SysId (on blocks), wheel radius. SysId runs through the shared SysId tool (section 8) on a "Characterization" chooser in the main robot code, using the same IO classes and config, not a separate robot program, so the constants measured always match the code that uses them; logs go to wpilog with URCL for the SysId tool. The fitted drive and steer values also feed the sim plants. Done when measured constants are committed and the robot drives 5 m straight within 2 cm.
 8. **M7 Autonomous and vision:** PathPlanner config from measured values, port localization from robot-2026. Done when a 3 m path ends within 3 cm and 2°, with and without vision.
 9. **M8 SystemCore readiness:** track the RobotPy 2027 preview job, move CAN bus assignment to `CANPort`, decide on an odometry thread. Done when tests pass on the 2027 packages.
+10. **M9 Repo hardening and deploy review:** turn on branch protection for `main` and `swerve-dev` (section 1) with the Linux tests and ruff lint as required checks; make pyright blocking once its findings are cleared; review deploy provenance and event deploys (below) and adopt what's useful. Done when protections are on and the deploy decision is written down here.
+
+**Deploy provenance and event deploys (to review at M9).** 6328 and other teams make sure the code on the robot is always in git: their event deploy commits any uncommitted changes to an event branch before deploying. A Python version for us: a `make deploy` that refuses a dirty tree (or commits to `event/<event-name>`), tags each event deploy, and publishes the git hash, branch and dirty flag on the dashboard and in the wpilog, so the pit checklist's "deployed code matches the latest commit" check is one glance.
 
 ## 7. Data logging
 

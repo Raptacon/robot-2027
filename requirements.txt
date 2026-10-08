@@ -1,9 +1,10 @@
 #Common Python Libs
-pyflakes
 pyyaml
 
 #Package, testing tools
-flake8
+ruff==0.16.10
+pyright
+pre-commit
 coverage
 wheel
 pdoc

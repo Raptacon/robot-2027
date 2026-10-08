@@ -30,8 +30,16 @@ run: ## Runs the robot
 ${VENV}:
 	${PYTHON} -m venv ${VENV}
 
-lint: ## Runs the linter(s)
-	${VENVBIN}/flake8 .
+lint: ## Runs ruff lint and format checks (same as CI)
+	${VENVBIN}/ruff check .
+	${VENVBIN}/ruff format --check .
+
+format: ## Auto-fixes lint and formats the code
+	${VENVBIN}/ruff check --fix .
+	${VENVBIN}/ruff format .
+
+typecheck: ## Runs pyright (informational for now)
+	${VENVBIN}/pyright
 
 test: setup_${VENV} lint  coverage ## Does a lint and then test
 	${VENVBIN}/${PYTHON} -m robotpy test
