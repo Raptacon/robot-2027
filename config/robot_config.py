@@ -1,9 +1,31 @@
 """
-Per-robot swerve config types. Each robot is one module in config/robots/.
+Types that describe one robot's swerve drive.
 
-Everything is frozen: a config is built once at import and never changed at
-runtime. Units are SI (meters, radians) except encoder offsets, which are in
-rotations to match what calibration tools print.
+What is this file for?
+    :mod:`config.module_presets` says what is true for every module of a kind.
+    This file says what is true for *one robot*: where each module sits, the
+    CAN ID of each motor and encoder, each encoder's offset, and the measured
+    wheel size.
+
+    Each robot gets its own file in ``config/robots/`` that builds a
+    :class:`RobotConfig`. See ``config/robots/swerve_test_bot.py`` for a
+    complete example.
+
+Units:
+    Distances are in meters and angles in radians, like the rest of WPILib.
+    The one exception is encoder offsets, which are in *rotations*
+    (1 rotation = 360 degrees), because that is what calibration tools print.
+
+Coordinates:
+    Positions are measured from the center of the robot. +x points toward the
+    front of the robot and +y points to the robot's left. So the front-left
+    module has a positive x and a positive y.
+
+Why frozen?
+    Every class here uses ``@dataclass(frozen=True)``, so a config can't be
+    changed while the robot runs. To change a value, edit the robot's config
+    file and commit it to git. That way the code on the robot always matches
+    what is in git.
 """
 
 import math
@@ -11,17 +33,54 @@ from dataclasses import dataclass
 
 from config.module_presets import NEO, MotorSpec, ModulePreset
 
-# WPILib order for kinematics arrays.
 CORNER_NAMES = ("frontLeft", "frontRight", "backLeft", "backRight")
+"""Module names in the order WPILib expects: front-left, front-right, back-left, back-right.
+
+Every list of four modules in our code uses this order.
+"""
 
 
 @dataclass(frozen=True)
 class CornerConfig:
-    """One module position on the robot.
+    """Settings for the module at one corner of the robot.
 
-    x_m, y_m: wheel contact point from robot center (+x forward, +y left).
-    encoder_offset_rot: added to the raw absolute reading so 0 means the
-        wheel points forward. Kept in [-0.5, 0.5).
+    You usually don't build these one at a time; :func:`mirrored_corners`
+    builds all four. Build them by hand only if the modules aren't in a
+    rectangle.
+
+    Attributes:
+        name: One of :data:`CORNER_NAMES`, like ``"frontLeft"``.
+        x_m: How far the wheel is in front of the robot's center, in meters.
+            Negative means behind the center.
+        y_m: How far the wheel is to the left of the robot's center, in
+            meters. Negative means to the right.
+        drive_can_id: CAN ID of the drive motor's SparkMax.
+        steer_can_id: CAN ID of the steer motor's SparkMax.
+        encoder_can_id: CAN ID of the absolute encoder that tells us which way
+            the wheel points.
+        encoder_offset_rot: The number added to the encoder's raw reading so
+            that 0 means "wheel pointing straight forward". In rotations,
+            between -0.5 and 0.5. Measured with the steps in
+            doc/swerve/tuning-and-calibration.md section 3.
+        drive_inverted: ``True`` if the drive motor has to be reversed so a
+            positive command rolls the wheel forward.
+
+    Example:
+        A module 0.3 m forward and 0.3 m left of center, with CAN IDs 50 to 52:
+
+        >>> from config.robot_config import CornerConfig
+        >>> fl = CornerConfig(
+        ...     name="frontLeft",
+        ...     x_m=0.3,
+        ...     y_m=0.3,
+        ...     drive_can_id=50,
+        ...     steer_can_id=51,
+        ...     encoder_can_id=52,
+        ...     encoder_offset_rot=0.125,
+        ...     drive_inverted=False,
+        ... )
+        >>> fl.can_ids
+        (50, 51, 52)
     """
 
     name: str
@@ -35,11 +94,45 @@ class CornerConfig:
 
     @property
     def can_ids(self) -> tuple[int, int, int]:
+        """This module's CAN IDs as (drive, steer, encoder)."""
         return (self.drive_can_id, self.steer_can_id, self.encoder_can_id)
 
 
 @dataclass(frozen=True)
 class RobotConfig:
+    """Everything the drive code needs to know about one robot's swerve.
+
+    Attributes:
+        name: The robot's name. It must match the name set in NetworkTables
+            at ``/robot/name`` (see :mod:`config.loader`).
+        preset: Which modules and gears the robot has, like ``MK4I_L2``.
+        corners: The four modules in :data:`CORNER_NAMES` order. Usually made
+            with :func:`mirrored_corners`.
+        wheel_radius_m: Wheel radius in meters. Start with
+            ``NOMINAL_WHEEL_RADIUS_M``, then replace it with the measured
+            value from the wheel radius test.
+        drive_motor: The drive motor type. Defaults to a NEO.
+        steer_motor: The steer motor type. Defaults to a NEO.
+        gyro_can_id: The gyro's CAN ID, or ``None`` if the gyro isn't on CAN
+            (for example the IMU built into SystemCore).
+        gyro_inverted: ``True`` if the gyro reads clockwise as positive. WPILib
+            expects counterclockwise to be positive.
+        can_bus: Which CAN bus the drive is on. Empty means the default bus.
+            Choosing a bus on SystemCore comes in milestone M8.
+
+    The properties below are worked out from these values, so they always
+    agree with each other. Don't copy them into the config by hand.
+
+    Example:
+        >>> from config.robots.swerve_test_bot import CONFIG
+        >>> CONFIG.preset.name
+        'MK4i_L2'
+        >>> round(CONFIG.free_speed_mps, 2)  # theoretical top speed, m/s
+        4.47
+        >>> round(CONFIG.drive_base_radius_m, 2)  # center to a wheel, m
+        0.39
+    """
+
     name: str
     preset: ModulePreset
     corners: tuple[CornerConfig, CornerConfig, CornerConfig, CornerConfig]
@@ -48,28 +141,41 @@ class RobotConfig:
     steer_motor: MotorSpec = NEO
     gyro_can_id: int | None = None
     gyro_inverted: bool = False
-    # Empty means the controller's default bus. SystemCore bus assignment is M8.
     can_bus: str = ""
 
     @property
     def drive_m_per_motor_rot(self) -> float:
+        """Meters the robot rolls for one drive motor rotation (preset gears plus this robot's wheel)."""
         return self.preset.drive_m_per_motor_rot(self.wheel_radius_m)
 
     @property
     def free_speed_mps(self) -> float:
+        """Theoretical top speed in meters per second. Expect 80 to 90 percent of it in practice."""
         return self.preset.free_speed_mps(self.drive_motor, self.wheel_radius_m)
 
     @property
     def drive_base_radius_m(self) -> float:
-        """Distance from robot center to the farthest module."""
+        """Distance in meters from the robot's center to the farthest wheel.
+
+        When the robot spins in place, each wheel drives around a circle this
+        size. It is used for the top spin rate and for PathPlanner.
+        """
         return max(math.hypot(c.x_m, c.y_m) for c in self.corners)
 
     @property
     def max_angular_speed_rad_per_s(self) -> float:
-        """Theoretical spin rate at free speed: v_max / r."""
+        """Theoretical top spin rate in radians per second.
+
+        A wheel at top speed going around a circle of radius r spins the
+        robot at speed / r.
+        """
         return self.free_speed_mps / self.drive_base_radius_m
 
     def all_can_ids(self) -> list[int]:
+        """Every CAN ID this config uses (motors, encoders and gyro).
+
+        The config tests use this to check that no two devices share an ID.
+        """
         ids = [i for c in self.corners for i in c.can_ids]
         if self.gyro_can_id is not None:
             ids.append(self.gyro_can_id)
@@ -77,7 +183,27 @@ class RobotConfig:
 
 
 def wrap_rotations(rot: float) -> float:
-    """Wrap an angle in rotations to [-0.5, 0.5)."""
+    """Wrap an angle in rotations into the range -0.5 to just under 0.5.
+
+    Angles that differ by a whole rotation point the same way, so 0.75
+    rotations (270 degrees) and -0.25 rotations (-90 degrees) are the same
+    direction. Wrapping keeps every offset in one range so they are easy to
+    compare and check.
+
+    Args:
+        rot: An angle in rotations, any size.
+
+    Returns:
+        The same direction as a number from -0.5 up to (but not including) 0.5.
+
+    Example:
+        >>> from config.robot_config import wrap_rotations
+        >>> wrap_rotations(0.75)
+        -0.25
+        >>> wrap_rotations(1.25)  # a full turn plus a quarter turn
+        0.25
+    """
+    # Shift by half a turn, keep the part after the whole turns, shift back.
     return (rot + 0.5) % 1.0 - 0.5
 
 
@@ -88,14 +214,54 @@ def mirrored_corners(
     offsets_rot: tuple[float, float, float, float],
     drive_inverted: tuple[bool, bool, bool, bool],
 ) -> tuple[CornerConfig, CornerConfig, CornerConfig, CornerConfig]:
-    """Build FL, FR, BL, BR corners mirrored from the front-left position.
+    """Build all four corners for modules placed in a rectangle.
 
-    Works for any rectangular layout (x_m and y_m can differ). For other
-    layouts, list the four CornerConfig values directly.
+    Most swerve robots put a module at each corner of a rectangle (or a
+    square, which is a rectangle too). Then you only need the front-left
+    module's position: the others are the same distances, mirrored. x_m and
+    y_m can be different, so the robot doesn't have to be square.
 
-    CAN IDs follow the team convention: 3 consecutive IDs per module (drive,
-    steer, encoder) starting at first_can_id, in FL, FR, BL, BR order.
+    If your modules aren't in a rectangle, skip this function and write the
+    four :class:`CornerConfig` values out by hand.
+
+    CAN IDs follow the team convention: each module uses 3 IDs in a row
+    (drive, steer, encoder), starting at ``first_can_id`` for front-left and
+    going front-left, front-right, back-left, back-right.
+
+    Args:
+        x_m: Distance in meters from the robot's center forward to the
+            front-left wheel. Use a positive number.
+        y_m: Distance in meters from the robot's center left to the
+            front-left wheel. Use a positive number.
+        first_can_id: The front-left drive motor's CAN ID (50 on our robots).
+        offsets_rot: The four encoder offsets in rotations, in front-left,
+            front-right, back-left, back-right order. Any value works; each is
+            wrapped into -0.5 to 0.5 with :func:`wrap_rotations`.
+        drive_inverted: Whether each drive motor is reversed, in the same
+            order.
+
+    Returns:
+        The four corners as (front-left, front-right, back-left, back-right).
+
+    Example:
+        A robot with wheels 0.25 m forward/back and 0.3 m left/right of center:
+
+        >>> from config.robot_config import mirrored_corners
+        >>> fl, fr, bl, br = mirrored_corners(
+        ...     x_m=0.25,
+        ...     y_m=0.3,
+        ...     first_can_id=50,
+        ...     offsets_rot=(0.125, 0.25, 0.375, 0.75),
+        ...     drive_inverted=(False, True, False, True),
+        ... )
+        >>> (br.name, br.x_m, br.y_m)  # back-right is behind and to the right
+        ('backRight', -0.25, -0.3)
+        >>> br.can_ids  # the 4th module uses IDs 59, 60, 61
+        (59, 60, 61)
+        >>> br.encoder_offset_rot  # 0.75 was wrapped
+        -0.25
     """
+    # (x sign, y sign) for FL, FR, BL, BR: front is +x, left is +y.
     signs = ((1, 1), (1, -1), (-1, 1), (-1, -1))
     corners = []
     for i, (name, (sx, sy)) in enumerate(zip(CORNER_NAMES, signs)):

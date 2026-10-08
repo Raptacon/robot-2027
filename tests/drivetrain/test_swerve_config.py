@@ -159,3 +159,20 @@ class TestLoader:
         finally:
             pub.set(loader.DEFAULT_ROBOT)
             pub.close()
+
+
+class TestDocExamples:
+    """The examples in the config docstrings are run here so they stay correct."""
+
+    @pytest.mark.parametrize(
+        "module_name",
+        ["config.module_presets", "config.robot_config", "config.loader"],
+    )
+    def test_docstring_examples(self, module_name):
+        import doctest
+        import importlib
+
+        module = importlib.import_module(module_name)
+        result = doctest.testmod(module, optionflags=doctest.ELLIPSIS)
+        assert result.attempted > 0
+        assert result.failed == 0
