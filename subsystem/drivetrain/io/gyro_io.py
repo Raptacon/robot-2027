@@ -7,10 +7,10 @@ the angle the robot has turned, counterclockwise-positive when seen from
 above.
 
 Which gyro?
-    The team hasn't picked the final gyro yet. Candidates are SystemCore's
-    built-in IMU and a navX3 on CAN. Because everything uses this interface,
-    switching gyros means adding one implementation file and changing the
-    robot config, not changing the drive code.
+    On SystemCore we use its built-in IMU; on a roboRIO we use a NavX. Each
+    has its own implementation of this interface, so the drive code is the
+    same on both, and adding another gyro later means adding one
+    implementation file and changing the robot config.
 
 Example:
     >>> from subsystem.drivetrain.io.gyro_io import GyroInputs

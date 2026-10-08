@@ -35,8 +35,7 @@ class GyroIOSim(GyroIO):
             ``connected``. Until then it reads 0.
         never_connects: ``True`` to simulate an unplugged gyro.
         drift_rad_per_s: Yaw drift added while the robot sits still, in
-            radians per second. 6328 measured about 1 degree per minute
-            (0.0003 rad/s) on an early SystemCore IMU.
+            radians per second. 1 degree per minute is about 0.0003 rad/s.
     """
 
     def __init__(
