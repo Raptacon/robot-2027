@@ -73,6 +73,8 @@ from subsystem.drivetrain.drivetrain import Drivetrain
 from subsystem.drivetrain.io.gyro_io_onboard import YawUnwrapper
 from subsystem.drivetrain.swerve_math import ChassisSpeeds
 from utils.sysid.characterizable import Characterizable, Reading
+from utils.sysid.mech.drivetrain import drivetrain as mech_drivetrain
+from utils.sysid.mech.rotary import rotary
 from utils.sysid.settings import SysIdSettings
 from utils.sysid.chooser import CharacterizationChooser
 from utils.sysid.routines import SysIdTests
@@ -81,6 +83,10 @@ log = logging.getLogger(__name__)
 
 
 # -- SysId mechanisms ---------------------------------------------------------
+
+MAX_TRAVEL_M = 5.0
+"""Every drive SysId test stops after the robot moves this far, meters.
+Change it to fit the clear carpet you have, leaving a meter spare."""
 
 
 def drive_mechanism(drivetrain: Drivetrain) -> Characterizable:
@@ -103,11 +109,12 @@ def drive_mechanism(drivetrain: Drivetrain) -> Characterizable:
             velocity=statistics.fmean(i.drive_velocity_mps for i in inputs),
         )
 
-    return Characterizable(
-        name="drive",
+    return mech_drivetrain(
+        "drive",
         subsystem=drivetrain,
         set_voltage=lambda volts: drivetrain.run_drive_volts(volts, 0.0),
         read=read,
+        max_travel_m=MAX_TRAVEL_M,
         settings=drivetrain.config.drive_sysid,
     )
 
@@ -136,12 +143,12 @@ def steer_mechanism(drivetrain: Drivetrain) -> Characterizable:
             velocity=statistics.fmean(i.steer_velocity_rad_per_s for i in inputs),
         )
 
-    return Characterizable(
-        name="steer",
+    # Swerve steering turns forever, so it has no limits.
+    return rotary(
+        "steer",
         subsystem=drivetrain,
         set_voltage=drivetrain.run_steer_volts,
         read=read,
-        angular=True,
         settings=drivetrain.config.steer_sysid,
     )
 
