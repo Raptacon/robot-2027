@@ -55,6 +55,8 @@ Code is formatted with `ruff format` and linted with `ruff check`; settings live
 
 `robot.py` defines `MyRobot(commands2.TimedCommandRobot)` running at 50 Hz (20 ms period). It sets up logging (wpilog via `DataLogManager`, Python logging via `utils/datalog_bridge.py`), loop timing (`utils/loop_timing.py`, published under `/FrameTiming/` at 10 Hz), `HealthAndStatus` telemetry, and the swerve `Drivetrain`. In simulation the drivetrain is built by `DrivetrainSim`; on the robot `build_drivetrain()` (`subsystem/drivetrain/drivetrain_hardware.py`) builds it from the real IO and URCL logs every SparkMax. In test mode, holding A on the driver controller runs whatever is picked on the dashboard's `Characterization` chooser (letting go stops it; B and the left bumper step through the options): `ModuleCheck` (`commands/drive/module_check.py`, every wheel to 0, 90 and 180 degrees on blocks) by default, or a SysId or calibration test.
 
+Keep `robotInit` declarative: one line per part (`self.drivetrain = self.drivetrainInit()`, `self.teleop = bind_driver_controls(...)`, `self.characterization = bind_test_controls(...)`), with the procedure in helper methods or `bind_*` functions in `commands/drive/bindings.py`.
+
 `MyRobot.callAndCatch` wraps calls to catch and log exceptions without crashing the robot on hardware (exceptions are re-raised in simulation so tests fail).
 
 ### Swerve design rules (see `doc/plans/robot-2027-code-plan.md`)

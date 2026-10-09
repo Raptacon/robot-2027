@@ -20,6 +20,18 @@ drivetrain.cancel_all       Press: cancel every running command
 
 ``drivetrain.auto_align`` stays unbound until vision is added.
 
+Test mode has its own buttons (:func:`bind_test_controls`), which only work
+while the robot is enabled in Test:
+
+==============================  ==========================================
+Action (YAML name)              What it does
+==============================  ==========================================
+characterization.run_test       Hold A: run the test picked on the
+                                Characterization chooser; let go to stop
+characterization.next_test      Press B: pick the next test
+characterization.previous_test  Press left bumper: pick the previous test
+==============================  ==========================================
+
 Example:
     In ``robot.py`` (the InputFactory must be created before the drivetrain):
 
@@ -28,14 +40,21 @@ Example:
         self.inputs = InputFactory(config_path="data/inputs/swerve_test_bot.yaml")
         ...
         self.teleop = bind_driver_controls(self.inputs, self.drivetrain)
+        self.characterization = bind_test_controls(self.inputs, self.drivetrain)
 """
 
 import commands2
+import wpilib
+from commands2.button import Trigger
 
+from commands.drive.calibrate_offsets import CalibrateOffsets
+from commands.drive.characterization import register_swerve
+from commands.drive.module_check import ModuleCheck
 from commands.drive.teleop_drive import TeleopDrive, TeleopSettings
 from commands.drive.x_lock import XLock
 from subsystem.drivetrain.drivetrain import Drivetrain
 from utils.input import InputFactory
+from utils.sysid.chooser import CharacterizationChooser
 
 SNAP_ACTIONS = {
     "drivetrain.snap_0": 0.0,
@@ -85,3 +104,33 @@ def bind_driver_controls(
         commands2.InstantCommand(commands2.CommandScheduler.getInstance().cancelAll)
     )
     return teleop
+
+
+def bind_test_controls(factory: InputFactory, drivetrain: Drivetrain) -> CharacterizationChooser:
+    """Set up test mode: the Characterization chooser, its buttons, and the offset calibration button.
+
+    The chooser starts on the module check and also holds every swerve
+    SysId and calibration test (see ``commands/drive/characterization.py``).
+    Holding A runs the picked test and letting go stops it, so a person can
+    always stop a test at once. The ``Characterization/Calibrate offsets``
+    dashboard button works while disabled.
+
+    Args:
+        factory: The robot's InputFactory (controller config).
+        drivetrain: The drivetrain the tests run on.
+
+    Returns:
+        The :class:`~utils.sysid.chooser.CharacterizationChooser`, so the
+        robot can stop a running test when test mode ends.
+    """
+    chooser = CharacterizationChooser("Module check", ModuleCheck(drivetrain))
+    register_swerve(chooser, drivetrain)
+    chooser.publish()
+    # Trigger(button.get) keeps working if the buttons are remapped at runtime.
+    chooser.bind(
+        run=Trigger(factory.getButton("characterization.run_test").get),
+        next_option=Trigger(factory.getButton("characterization.next_test").get),
+        previous_option=Trigger(factory.getButton("characterization.previous_test").get),
+    )
+    wpilib.SmartDashboard.putData("Characterization/Calibrate offsets", CalibrateOffsets(drivetrain))
+    return chooser

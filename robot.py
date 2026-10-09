@@ -6,20 +6,14 @@ import typing
 
 import commands2
 import wpilib
-from commands2.button import Trigger
 
-from commands.drive.bindings import bind_driver_controls
-from commands.drive.calibrate_offsets import CalibrateOffsets
-from commands.drive.characterization import register_swerve
-from commands.drive.module_check import ModuleCheck
-from commands.drive.teleop_drive import TeleopDrive
+from commands.drive.bindings import bind_driver_controls, bind_test_controls
 from config.loader import load_robot_config
 from subsystem.drivetrain.drivetrain import Drivetrain
 from subsystem.health_and_status import HealthAndStatus
 from utils.datalog_bridge import setup_logging
 from utils.input import InputFactory
 from utils.loop_timing import LoopTimer
-from utils.sysid.chooser import CharacterizationChooser
 
 
 class MyRobot(commands2.TimedCommandRobot):
@@ -63,34 +57,30 @@ class MyRobot(commands2.TimedCommandRobot):
         self.health = HealthAndStatus()
 
         self.robot_config = load_robot_config()
-        self.drivetrain: Drivetrain
-        self.teleop: TeleopDrive
+        self.drivetrain = self.drivetrainInit()
+        self.teleop = bind_driver_controls(self.inputs, self.drivetrain)
+        # Test mode: hold A to run the test picked on the Characterization chooser.
+        self.characterization = bind_test_controls(self.inputs, self.drivetrain)
+
+    def drivetrainInit(self) -> Drivetrain:
+        """Build the drivetrain: simulated in the simulator, real hardware on the robot.
+
+        Returns:
+            The :class:`Drivetrain`. In simulation, ``self.drive_sim`` also
+            holds the :class:`DrivetrainSim` around it.
+        """
+        loop_period_s = MyRobot.kDefaultPeriod / 1000
         if self.isSimulation():
             from subsystem.drivetrain.drivetrain_sim import DrivetrainSim
 
-            self.drive_sim = DrivetrainSim(self.robot_config, loop_period_s=MyRobot.kDefaultPeriod / 1000)
-            self.drivetrain = self.drive_sim.drivetrain
-        else:
-            from subsystem.drivetrain.drivetrain_hardware import build_drivetrain
+            self.drive_sim = DrivetrainSim(self.robot_config, loop_period_s=loop_period_s)
+            return self.drive_sim.drivetrain
 
-            self.drivetrain = build_drivetrain(self.robot_config, loop_period_s=MyRobot.kDefaultPeriod / 1000)
-            self.startRevLogging()
-        self.teleop = bind_driver_controls(self.inputs, self.drivetrain)
+        from subsystem.drivetrain.drivetrain_hardware import build_drivetrain
 
-        # Test mode: pick a test on the Characterization chooser (module check
-        # by default, or a SysId or calibration test), then hold A to run it.
-        # Letting go stops it, so a person can always stop a test at once.
-        self.characterization = CharacterizationChooser("Module check", ModuleCheck(self.drivetrain))
-        self.sysid = register_swerve(self.characterization, self.drivetrain)
-        self.characterization.publish()
-        # Trigger(button.get) keeps working if the buttons are remapped at runtime.
-        self.characterization.bind(
-            run=Trigger(self.inputs.getButton("characterization.run_test").get),
-            next_option=Trigger(self.inputs.getButton("characterization.next_test").get),
-            previous_option=Trigger(self.inputs.getButton("characterization.previous_test").get),
-        )
-        self.calibrate_offsets = CalibrateOffsets(self.drivetrain)
-        wpilib.SmartDashboard.putData("Characterization/Calibrate offsets", self.calibrate_offsets)
+        drivetrain = build_drivetrain(self.robot_config, loop_period_s=loop_period_s)
+        self.startRevLogging()
+        return drivetrain
 
     def telemInit(self) -> None:
         """Initialize data logging: NT logging, console, DS, and vendor loggers.
