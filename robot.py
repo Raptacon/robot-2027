@@ -7,9 +7,7 @@ import typing
 import commands2
 import wpilib
 
-from commands.drive.bindings import bind_driver_controls
-from commands.drive.module_check import ModuleCheck
-from commands.drive.teleop_drive import TeleopDrive
+from commands.drive.bindings import bind_driver_controls, bind_test_controls
 from config.loader import load_robot_config
 from subsystem.drivetrain.drivetrain import Drivetrain
 from subsystem.health_and_status import HealthAndStatus
@@ -27,8 +25,9 @@ class MyRobot(commands2.TimedCommandRobot):
     It sets up logging, loop timing and health telemetry, the driver
     controller, and the swerve drivetrain with teleop driving. In simulation
     the drivetrain runs on simulated IO; on the robot it uses the SPARK MAX,
-    CANcoder and gyro IO. Test mode runs the module check (wheels to 0, 90
-    and 180 degrees) for bring-up on blocks.
+    CANcoder and gyro IO. In test mode, holding A runs the test picked on
+    the dashboard's Characterization chooser: the module check (wheels to 0,
+    90 and 180 degrees) by default, or a SysId or calibration test.
     """
 
     # 20 ms default period (50 Hz)
@@ -58,20 +57,30 @@ class MyRobot(commands2.TimedCommandRobot):
         self.health = HealthAndStatus()
 
         self.robot_config = load_robot_config()
-        self.drivetrain: Drivetrain
-        self.teleop: TeleopDrive
+        self.drivetrain = self.drivetrainInit()
+        self.teleop = bind_driver_controls(self.inputs, self.drivetrain)
+        # Test mode: hold A to run the test picked on the Characterization chooser.
+        self.characterization = bind_test_controls(self.inputs, self.drivetrain)
+
+    def drivetrainInit(self) -> Drivetrain:
+        """Build the drivetrain: simulated in the simulator, real hardware on the robot.
+
+        Returns:
+            The :class:`Drivetrain`. In simulation, ``self.drive_sim`` also
+            holds the :class:`DrivetrainSim` around it.
+        """
+        loop_period_s = MyRobot.kDefaultPeriod / 1000
         if self.isSimulation():
             from subsystem.drivetrain.drivetrain_sim import DrivetrainSim
 
-            self.drive_sim = DrivetrainSim(self.robot_config, loop_period_s=MyRobot.kDefaultPeriod / 1000)
-            self.drivetrain = self.drive_sim.drivetrain
-        else:
-            from subsystem.drivetrain.drivetrain_hardware import build_drivetrain
+            self.drive_sim = DrivetrainSim(self.robot_config, loop_period_s=loop_period_s)
+            return self.drive_sim.drivetrain
 
-            self.drivetrain = build_drivetrain(self.robot_config, loop_period_s=MyRobot.kDefaultPeriod / 1000)
-            self.startRevLogging()
-        self.teleop = bind_driver_controls(self.inputs, self.drivetrain)
-        self.module_check = ModuleCheck(self.drivetrain)
+        from subsystem.drivetrain.drivetrain_hardware import build_drivetrain
+
+        drivetrain = build_drivetrain(self.robot_config, loop_period_s=loop_period_s)
+        self.startRevLogging()
+        return drivetrain
 
     def telemInit(self) -> None:
         """Initialize data logging: NT logging, console, DS, and vendor loggers.
@@ -138,12 +147,16 @@ class MyRobot(commands2.TimedCommandRobot):
         self.__timing.start("userCode")
 
     def testInit(self) -> None:
-        """Test mode runs the module check: every wheel points at 0, 90 and 180 degrees in turn."""
+        """Test mode: hold A to run the test picked on the Characterization chooser.
+
+        Nothing moves until A is held, and letting go stops the test. B and
+        the left bumper step through the chooser. See
+        commands/drive/characterization.py for the tests.
+        """
         self.__timing.reset_all()
-        self.module_check.schedule()
 
     def testExit(self) -> None:
-        self.module_check.cancel()
+        self.characterization.stop()
 
     def testPeriodic(self) -> None:
         self.__timing.start("userCode")

@@ -32,7 +32,7 @@ Configure every SparkMax from code on every boot, starting from defaults, so a s
 | Ramp rates | none | none | Ramps delay the closed loop; limit acceleration at the chassis instead |
 | Position conversion | 2πr ÷ 6.75 (m per motor rotation; 6.12 for L3) | 2π ÷ (150/7) (rad per motor rotation) | Everything downstream in meters and radians |
 | Velocity conversion | position factor ÷ 60 (m/s per RPM) | position factor ÷ 60 (rad/s per RPM) | NEO velocity is natively RPM |
-| NEO velocity filter | `uvwMeasurementPeriod` 8 to 16 ms, `uvwAverageDepth` 2 to 4 | default is fine | Default 32 ms × 8 samples lags about 100 ms |
+| NEO velocity filter | `uvwMeasurementPeriod` 10 ms, `uvwAverageDepth` 2 (6328's values; robot-2027 sets both motors this way) | same | Default 32 ms × 8 samples lags about 100 ms, which spoils SysId's kA and the velocity loop |
 | Closed loop | velocity, kP small, feedforward from wpimath as `arbFeedforward` in volts | position, `positionWrappingEnabled`, input range −π to π |  |
 | Status frame: primary encoder position | 10 to 20 ms | 10 to 20 ms | Odometry needs fresh wheel position every loop |
 | Status frame: primary encoder velocity | 20 ms | 20 ms or slower |  |
@@ -66,11 +66,23 @@ Tune in this order, because each step depends on the one before. Log setpoint an
 4. Add a little kD only if it still overshoots.
 5. Target: a 90° step settles in under about 0.15 s with no visible overshoot, and all four modules look the same. One module that needs very different gains has a mechanical problem.
 
-**Step 2: drive feedforward (on carpet, open space).** Use WPILib SysId. In Python, `commands2.sysid.SysIdRoutine` runs the four tests (quasistatic and dynamic, forward and backward) with all wheels locked at 0°; log with `wpilib.DataLogManager`, and our repo already has `robotpy-urcl` for SparkMax data. Load the log in the SysId tool and read kS, kV, kA. Sanity check: kV should be near 12 V ÷ 4.47 m/s ≈ 2.7 V per m/s for L2 NEO (about 2.4 for L3), and kS usually 0.1 to 0.3 V. All four modules share one set of gains.
+In robot-2027 the "Steer step test" chooser option does steps 2 and 5 for you and publishes settle time and overshoot per corner. Steer SysId measures only the steer feedforward (kS, kV); the SysId app's feedback panel can suggest a starting kP from it, but check any kP with the step test.
+
+**Step 2: drive feedforward (on carpet, open space).** Use WPILib SysId. In robot-2027, pick "SysId drive: all four tests" on the dashboard's Characterization chooser, enable Test mode, and hold A on the driver controller for as long as the test should run; letting go stops it (`commands/drive/characterization.py`). In Python, `commands2.sysid.SysIdRoutine` runs the four tests (quasistatic and dynamic, forward and backward) with all wheels locked at 0°; log with `wpilib.DataLogManager`, and our repo already has `robotpy-urcl` for SparkMax data. Load the log in the SysId tool and read kS, kV, kA. Sanity check: kV should be near 12 V ÷ 4.47 m/s ≈ 2.7 V per m/s for L2 NEO (about 2.4 for L3), and kS usually 0.1 to 0.3 V. All four modules share one set of gains.
+
+Getting numbers you can use (what went wrong for us before, and what top teams do):
+
+- **Run "Drive feedforward (slow)" first.** It ramps at 0.1 V/s (6328's rate) and shows kS and kV on the dashboard under `/Characterization/driveSlowRamp/estimate/` with no SysId app. 6328 takes drive kS and kV from this and only uses the SysId app for kA.
+- **Change settings from the dashboard.** Each mechanism's ramp, step and timeouts are under `/Characterization/<name>/settings/`, and the `SysId <name> preset` chooser loads a set at once (Config default, Gentle, Slow ramp). The next test uses them. They reset to the config file when the code restarts, so copy settings that worked into the config.
+- **Keep the dynamic step small.** robot-2027 uses 4 V for drive, not WPILib's 7 V. A big step slips the wheels and sags the battery, and kA comes out wrong.
+- **One routine per log, each test once.** Restart the robot code (new wpilog) before characterizing a different mechanism, and don't repeat a test in the same log (WPILib's SysId docs ask for each test once per log).
+- **Fresh, fully charged battery,** and leave room: the tests stop the moment you let go of A, so let go before a wall, not at it.
+- **Check the fit.** In the SysId app, quasistatic data should be a straight line and the acceleration fit r² should be well above about 0.2; below that, kA is noise. If the dashboard estimate and the app disagree a lot, look at the plots before trusting either.
+- **The NEO velocity filter matters.** With the default filter the measured speed lags about 100 ms behind the real speed and kA comes out badly. The robot code sets the shorter filter in section 2.
 
 **Step 3: drive velocity P.** With feedforward in, add kP until measured speed tracks the setpoint during acceleration without chatter. Start around 0.1 V per m/s of error if using wpimath on the roboRIO, or the equivalent duty-cycle value on the SparkMax. Keep kI = 0.
 
-**Step 4: wheel radius (on carpet).** Rotate the robot slowly in place for several full turns. Every wheel travels on a circle of radius R around the center (0.390 m for our module layout). Then:
+**Step 4: wheel radius (on carpet).** Rotate the robot slowly in place (robot-2027's "Wheel radius" option spins at 0.25 rad/s, 6328's speed, so the wheels don't slip). Every wheel travels on a circle of radius R around the center (0.390 m for our module layout). Then:
 
 ```latex
 r_{\text{wheel}} = \frac{\Delta\theta_{\text{gyro}} \cdot R}{\overline{\Delta\varphi}_{\text{wheel}}}
@@ -143,7 +155,7 @@ Copy this list for each event day.
 - [REV: Closed loop control getting started](https://docs.revrobotics.com/revlib/spark/closed-loop/closed-loop-control-getting-started)
 - [REV: EncoderConfig API](https://codedocs.revrobotics.com/java/com/revrobotics/spark/config/encoderconfig); uvw filter defaults checked in the robotpy-rev 2026.0.4 stubs
 - [YAGSL: Fix common SparkMAX/SparkFlex problems](https://yagsl.yassrobotics.com/how-to-guides/fix-sparkmax-common-problems.md)
-- [AdvantageKit Spark swerve template](https://docs.advantagekit.org/getting-started/template-projects/spark-swerve-template) (feedforward and wheel radius characterization routines)
+- [AdvantageKit Spark swerve template](https://docs.advantagekit.org/getting-started/template-projects/spark-swerve-template) (6328's feedforward and wheel radius characterization routines and Spark settings)
 - [URCL (REV CAN logger)](https://github.com/Mechanical-Advantage/URCL) and [AdvantageKit SysId compatibility](https://docs.advantagekit.org/data-flow/sysid-compatibility)
 - [WPILib: System identification (SysId)](https://docs.wpilib.org/en/stable/docs/software/advanced-controls/system-identification/index.html)
 - [Chief Delphi: Angle offset on swerve modules changing (loose magnets)](https://www.chiefdelphi.com/t/angle-offset-on-swerve-modules-changing-solved/495495)

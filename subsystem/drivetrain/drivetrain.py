@@ -188,6 +188,23 @@ class Drivetrain(commands2.Subsystem):
         for module, (x, y) in zip(self.modules, self._module_xy):
             module.set_angle(math.atan2(y, x))
 
+    def run_drive_volts(self, volts: float, angle_rad: float = 0.0) -> None:
+        """Point every wheel at ``angle_rad`` and apply ``volts`` to every drive motor (drive SysId).
+
+        Args:
+            volts: Drive motor voltage, volts.
+            angle_rad: Wheel direction, radians. 0 drives the robot forward.
+        """
+        self.commanded = ChassisSpeeds()
+        for module in self.modules:
+            module.run_drive_volts(volts, angle_rad)
+
+    def run_steer_volts(self, volts: float) -> None:
+        """Apply ``volts`` to every steer motor with the drive motors off (steer SysId, on blocks)."""
+        self.commanded = ChassisSpeeds()
+        for module in self.modules:
+            module.run_steer_volts(volts)
+
     def reset_heading(self, heading_rad: float) -> None:
         """Tell odometry which way the robot faces now, keeping its position.
 

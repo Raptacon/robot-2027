@@ -32,6 +32,7 @@ import math
 from dataclasses import dataclass
 
 from config.module_presets import NEO, MotorSpec, ModulePreset
+from utils.sysid.settings import SysIdSettings
 
 CORNER_NAMES = ("frontLeft", "frontRight", "backLeft", "backRight")
 """Module names in the order WPILib expects: front-left, front-right, back-left, back-right.
@@ -105,15 +106,21 @@ class DriveFeedforward:
     The motor controller's speed loop only corrects errors after they
     happen. A feedforward guesses the right voltage up front from the
     target speed, so the loop has little left to correct. The numbers come
-    from a SysId test (milestone M6); until then kS is 0 and kV is worked out
+    from the drive SysId test (on carpet, "SysId drive" on the test-mode
+    Characterization chooser); until then kS is 0 and kV is worked out
     from the motor's free speed.
 
     voltage = kS x sign(speed) + kV x speed
+
+    kA isn't used for driving yet. The simulator uses it (with kV) so the
+    simulated wheels speed up like the real ones.
 
     Attributes:
         ks_volts: Volts needed just to overcome friction and start moving.
         kv_volts_per_mps: Volts per meter per second of wheel speed. ``None``
             means "use 12 V divided by the theoretical top speed".
+        ka_volts_per_mps2: Volts per m/s^2 of wheel acceleration, with the
+            robot's weight on the wheels. ``None`` until measured.
 
     Example:
         >>> from config.robot_config import DriveFeedforward
@@ -124,12 +131,54 @@ class DriveFeedforward:
 
     ks_volts: float = 0.0
     kv_volts_per_mps: float | None = None
+    ka_volts_per_mps2: float | None = None
 
     def volts(self, speed_mps: float, kv_volts_per_mps: float) -> float:
         """Feedforward voltage for a wheel speed, using the given kV."""
         if speed_mps == 0.0:
             return 0.0
         return math.copysign(self.ks_volts, speed_mps) + kv_volts_per_mps * speed_mps
+
+
+@dataclass(frozen=True)
+class SteerFeedforward:
+    """Measured steer motor numbers from the steer SysId test (on blocks).
+
+    The steer angle loop doesn't use these yet; they help pick the steer
+    PID gains, and the simulator uses them so the simulated wheels turn
+    like the real ones. All ``None`` until measured.
+
+    The SysId app reports turning mechanisms per *rotation*. Divide its kV
+    and kA by 2 pi (6.283) to get the per-radian numbers stored here. The
+    dashboard estimate under ``/Characterization/steer/estimate/`` is
+    already per radian.
+
+    Attributes:
+        ks_volts: Volts to overcome friction and start the wheel turning.
+        kv_volts_per_rad_per_s: Volts per rad/s of steering speed.
+        ka_volts_per_rad_per_s2: Volts per rad/s^2 of steering acceleration.
+
+    Example:
+        >>> from config.robot_config import SteerFeedforward
+        >>> SteerFeedforward(ks_volts=0.15, kv_volts_per_rad_per_s=0.4).ka_volts_per_rad_per_s2 is None
+        True
+    """
+
+    ks_volts: float = 0.0
+    kv_volts_per_rad_per_s: float | None = None
+    ka_volts_per_rad_per_s2: float | None = None
+
+
+DRIVE_SYSID = SysIdSettings(ramp_volts_per_s=1.0, step_volts=4.0, timeout_s=5.0, dynamic_timeout_s=2.0)
+"""Default drive SysId settings. At these values each test drives the robot up
+to about 5 m, so start with the robot at one end of a long clear stretch of
+carpet. The reverse tests drive it back. Let go of the run button to stop.
+
+The step is 4 V, not WPILib's 7 V: a big step makes the wheels slip and the
+battery sag, which spoils kA. CTRE's swerve example uses 4 V for the same reason."""
+
+STEER_SYSID = SysIdSettings(ramp_volts_per_s=1.0, step_volts=4.0, timeout_s=6.0, dynamic_timeout_s=2.0)
+"""Default steer SysId settings (robot on blocks, wheels off the ground)."""
 
 
 @dataclass(frozen=True)
@@ -192,10 +241,14 @@ class RobotConfig:
         gyro_inverted: ``True`` if the gyro reads clockwise as positive. WPILib
             expects counterclockwise to be positive.
         can_bus: Which CAN bus the drive is on. Empty means the default bus.
-            Choosing a bus on SystemCore comes in milestone M8.
+            Choosing a bus on SystemCore isn't supported yet.
         drive_feedforward: The drive motors' :class:`DriveFeedforward`.
-            Replace with SysId values in milestone M6.
+            Replace with the drive SysId values.
+        steer_feedforward: The steer motors' :class:`SteerFeedforward`,
+            from the steer SysId test.
         spark: The :class:`SparkSettings` for every drive and steer controller.
+        drive_sysid: How hard the drive SysId test pushes (:data:`DRIVE_SYSID`).
+        steer_sysid: How hard the steer SysId test pushes (:data:`STEER_SYSID`).
         systemcore_imu_mount: How SystemCore is mounted on the robot, for its
             built-in IMU: ``"flat"``, ``"landscape"`` or ``"portrait"``
             (WPILib's ``OnboardIMU.MountOrientation``). Not used on a roboRIO.
@@ -223,7 +276,10 @@ class RobotConfig:
     gyro_inverted: bool = False
     can_bus: str = ""
     drive_feedforward: DriveFeedforward = DriveFeedforward()
+    steer_feedforward: SteerFeedforward = SteerFeedforward()
     spark: SparkSettings = SparkSettings()
+    drive_sysid: SysIdSettings = DRIVE_SYSID
+    steer_sysid: SysIdSettings = STEER_SYSID
     systemcore_imu_mount: str = "flat"
 
     @property

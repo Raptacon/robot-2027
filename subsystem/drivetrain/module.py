@@ -194,6 +194,37 @@ class SwerveModule:
         self.io.set_steer_angle(target.angle_rad)
         self.io.set_drive_velocity(0.0, self.config.drive_feedforward_volts(0.0))
 
+    def run_drive_volts(self, volts: float, angle_rad: float) -> None:
+        """Point the wheel at ``angle_rad`` and apply ``volts`` straight to the drive motor.
+
+        This skips the speed loop and feedforward, for the drive SysId test.
+
+        Args:
+            volts: Drive motor voltage, volts.
+            angle_rad: Direction to point, radians, 0 toward the robot's front.
+        """
+        if not self.seeded:
+            self.setpoint = ModuleTarget()
+            self.io.stop()
+            return
+        angle = math.remainder(angle_rad, math.tau)
+        self.setpoint = ModuleTarget(0.0, angle)
+        self.io.set_steer_angle(angle)
+        self.io.set_drive_voltage(volts)
+
+    def run_steer_volts(self, volts: float) -> None:
+        """Apply ``volts`` straight to the steer motor, with the drive motor off (steer SysId, on blocks).
+
+        Args:
+            volts: Steer motor voltage, volts. Positive turns counterclockwise.
+        """
+        if not self.seeded:
+            self.setpoint = ModuleTarget()
+            self.io.stop()
+            return
+        self.io.set_drive_voltage(0.0)
+        self.io.set_steer_voltage(volts)
+
     def stop(self) -> None:
         """Stop both motors."""
         self.setpoint = ModuleTarget(0.0, self.setpoint.angle_rad)

@@ -41,8 +41,9 @@ from subsystem.drivetrain.io.sim_motor import NOMINAL_VOLTS, SimMotor
 class ModuleSimOptions:
     """Settings for one simulated module. The defaults are a healthy module.
 
-    The motor time constants and gains are placeholders until SysId
-    (milestone M6) gives measured kV and kA for our robot.
+    Once the robot config has measured kS, kV and kA (from the SysId
+    tests), the simulated motors use them instead of ``drive_tau_s`` and
+    ``steer_tau_s``.
 
     Attributes:
         latency_loops: How many loops late the sensor readings arrive. 0 means
@@ -54,8 +55,10 @@ class ModuleSimOptions:
         actual_wheel_radius_m: The real wheel radius, if different from the
             config (for example, worn tread).
         drive_tau_s: How quickly the drive motor reaches a new speed, in
-            seconds (kA / kV). Includes the robot's weight.
-        steer_tau_s: How quickly the steer motor reaches a new speed.
+            seconds (kA / kV). Includes the robot's weight. Only used until
+            the config has measured drive kV and kA.
+        steer_tau_s: How quickly the steer motor reaches a new speed. Only
+            used until the config has measured steer kV and kA.
         drive_kp: Drive speed loop gain, volts per (m/s) of error.
         steer_kp: Steer position loop gain, volts per radian of error.
         steer_kd: Steer damping, volts per (rad/s).
@@ -102,10 +105,22 @@ class ModuleIOSim(ModuleIO):
         self._steer_rad_per_rot = preset.steer_rad_per_motor_rot
         self._true_steer_rad_per_rot = actual.steer_rad_per_motor_rot
 
-        drive_kv = NOMINAL_VOLTS / config.drive_motor.free_speed_rps
-        steer_kv = NOMINAL_VOLTS / config.steer_motor.free_speed_rps
-        self._drive = SimMotor(kv=drive_kv, ka=drive_kv * opts.drive_tau_s)
-        self._steer = SimMotor(kv=steer_kv, ka=steer_kv * opts.steer_tau_s)
+        self._drive = _plant(
+            config.drive_feedforward.ks_volts,
+            config.drive_feedforward.kv_volts_per_mps,
+            config.drive_feedforward.ka_volts_per_mps2,
+            self._drive_m_per_rot,
+            config.drive_motor.free_speed_rps,
+            opts.drive_tau_s,
+        )
+        self._steer = _plant(
+            config.steer_feedforward.ks_volts,
+            config.steer_feedforward.kv_volts_per_rad_per_s,
+            config.steer_feedforward.ka_volts_per_rad_per_s2,
+            self._steer_rad_per_rot,
+            config.steer_motor.free_speed_rps,
+            opts.steer_tau_s,
+        )
 
         # Put the wheel at its starting angle. The steer encoder zeroes here,
         # so it reads 0 even though the wheel may not point forward.
@@ -209,3 +224,29 @@ class ModuleIOSim(ModuleIO):
             steer_current_amps=self._steer.current_amps,
             steer_temp_c=25.0,
         )
+
+
+def _plant(
+    ks: float,
+    kv_per_unit: float | None,
+    ka_per_unit: float | None,
+    units_per_rot: float,
+    free_speed_rps: float,
+    tau_s: float,
+) -> SimMotor:
+    """Build a simulated motor from measured SysId numbers, or from the motor's free speed until then.
+
+    Args:
+        ks: Measured kS, volts.
+        kv_per_unit: Measured kV per m/s (drive) or per rad/s (steer), or ``None``.
+        ka_per_unit: Measured kA per m/s^2 or rad/s^2, or ``None``.
+        units_per_rot: Meters or radians per motor rotation.
+        free_speed_rps: The motor's free speed, rotations per second.
+        tau_s: Time constant (kA / kV) to use when kA isn't measured.
+    """
+    if kv_per_unit is not None and ka_per_unit is not None:
+        # SysId numbers are per meter (or radian) as the encoder reports it;
+        # the sim motor works per motor rotation.
+        return SimMotor(kv=kv_per_unit * units_per_rot, ka=ka_per_unit * units_per_rot, ks=ks)
+    kv = NOMINAL_VOLTS / free_speed_rps
+    return SimMotor(kv=kv, ka=kv * tau_s)

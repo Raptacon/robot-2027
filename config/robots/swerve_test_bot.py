@@ -55,7 +55,8 @@ CONFIG = RobotConfig(
         # All four drive motors are reversed on this robot (FL, FR, BL, BR).
         drive_inverted=(True, True, True, True),
     ),
-    # A new 4 in wheel. Replace with the measured radius after the M6 test.
+    # A new 4 in wheel. Replace with the measured radius from the wheel radius
+    # test ("Wheel radius" on the test-mode Characterization chooser).
     wheel_radius_m=NOMINAL_WHEEL_RADIUS_M,
     # No CAN gyro picked yet, so there is no gyro CAN ID.
     gyro_can_id=None,

@@ -61,6 +61,19 @@ actions:
       input_type: boolean_trigger
       trigger_mode: while_true
       threshold: 0.25
+  characterization:
+    run_test:
+      description: Test mode only. Hold to run the test picked on the Characterization chooser; let go to stop
+      input_type: button
+      trigger_mode: while_true
+    next_test:
+      description: Test mode only. Pick the next test on the Characterization chooser
+      input_type: button
+      trigger_mode: on_true
+    previous_test:
+      description: Test mode only. Pick the previous test on the Characterization chooser
+      input_type: button
+      trigger_mode: on_true
 
 controllers:
   0:
@@ -78,6 +91,9 @@ controllers:
       pov_down: [drivetrain.snap_180]
       pov_right: [drivetrain.snap_270]
       back_button: [drivetrain.cancel_all]
+      a_button: [characterization.run_test]
+      b_button: [characterization.next_test]
+      left_bumper: [characterization.previous_test]
       right_trigger: [drivetrain.auto_align]
 
   1:

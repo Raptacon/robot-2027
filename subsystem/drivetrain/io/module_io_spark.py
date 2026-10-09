@@ -175,10 +175,11 @@ def drive_config(config: RobotConfig, corner: CornerConfig) -> rev.SparkMaxConfi
     cfg.inverted(corner.drive_inverted)
     cfg.smartCurrentLimit(settings.drive_current_limit_amps)
     cfg.voltageCompensation(12.0)
-    # Meters and m/s instead of rotations and RPM. A short velocity filter
-    # (16 ms x 2 samples instead of 32 ms x 8) cuts about 100 ms of lag.
+    # Meters and m/s instead of rotations and RPM. The default velocity filter
+    # (32 ms x 8 samples) reports speed about 112 ms late, which spoils SysId
+    # data and the speed loop. 10 ms x 2 samples (what 6328 uses) is about 5 ms.
     cfg.encoder.positionConversionFactor(m_per_rot).velocityConversionFactor(m_per_rot / 60.0)
-    cfg.encoder.uvwMeasurementPeriod(16).uvwAverageDepth(2)
+    cfg.encoder.uvwMeasurementPeriod(10).uvwAverageDepth(2)
     cfg.closedLoop.pid(settings.drive_kp, 0.0, 0.0)
     _set_report_periods(cfg, settings.encoder_period_ms)
     return cfg
@@ -214,6 +215,8 @@ def _set_report_periods(cfg: rev.SparkMaxConfig, encoder_period_ms: int) -> None
     signals.primaryEncoderVelocityPeriodMs(encoder_period_ms)
     signals.appliedOutputPeriodMs(encoder_period_ms)
     signals.outputCurrentPeriodMs(encoder_period_ms)
+    # Applied volts = applied output x bus voltage, so SysId needs both fresh.
+    signals.busVoltagePeriodMs(encoder_period_ms)
     signals.analogPositionPeriodMs(_RARELY_MS)
     signals.analogVelocityPeriodMs(_RARELY_MS)
     signals.analogVoltagePeriodMs(_RARELY_MS)
