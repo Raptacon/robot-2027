@@ -3,7 +3,8 @@ Swerve characterization: drive and steer SysId, wheel radius, and the steer step
 
 Everything here runs in **test mode**, picked on the dashboard's
 ``Characterization`` chooser (:mod:`utils.sysid.chooser`). Pick a test,
-then enable Test. Disable at any time to stop.
+enable Test, then **hold A** on the driver controller to run it. Let go of A
+to stop at once (B and the left bumper step through the chooser).
 
 The tests, and where the robot must be:
 

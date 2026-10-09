@@ -6,6 +6,7 @@ import typing
 
 import commands2
 import wpilib
+from commands2.button import Trigger
 
 from commands.drive.bindings import bind_driver_controls
 from commands.drive.calibrate_offsets import CalibrateOffsets
@@ -30,9 +31,9 @@ class MyRobot(commands2.TimedCommandRobot):
     It sets up logging, loop timing and health telemetry, the driver
     controller, and the swerve drivetrain with teleop driving. In simulation
     the drivetrain runs on simulated IO; on the robot it uses the SPARK MAX,
-    CANcoder and gyro IO. Test mode runs the test picked on the dashboard's
-    Characterization chooser: the module check (wheels to 0, 90 and 180
-    degrees) by default, or a SysId or calibration test.
+    CANcoder and gyro IO. In test mode, holding A runs the test picked on
+    the dashboard's Characterization chooser: the module check (wheels to 0,
+    90 and 180 degrees) by default, or a SysId or calibration test.
     """
 
     # 20 ms default period (50 Hz)
@@ -76,14 +77,20 @@ class MyRobot(commands2.TimedCommandRobot):
             self.startRevLogging()
         self.teleop = bind_driver_controls(self.inputs, self.drivetrain)
 
-        # Test mode runs whatever is picked on the Characterization chooser
-        # (module check by default, or a SysId or calibration test).
+        # Test mode: pick a test on the Characterization chooser (module check
+        # by default, or a SysId or calibration test), then hold A to run it.
+        # Letting go stops it, so a person can always stop a test at once.
         self.characterization = CharacterizationChooser("Module check", ModuleCheck(self.drivetrain))
         self.sysid = register_swerve(self.characterization, self.drivetrain)
         self.characterization.publish()
+        # Trigger(button.get) keeps working if the buttons are remapped at runtime.
+        self.characterization.bind(
+            run=Trigger(self.inputs.getButton("characterization.run_test").get),
+            next_option=Trigger(self.inputs.getButton("characterization.next_test").get),
+            previous_option=Trigger(self.inputs.getButton("characterization.previous_test").get),
+        )
         self.calibrate_offsets = CalibrateOffsets(self.drivetrain)
         wpilib.SmartDashboard.putData("Characterization/Calibrate offsets", self.calibrate_offsets)
-        self.test_command: commands2.Command | None = None
 
     def telemInit(self) -> None:
         """Initialize data logging: NT logging, console, DS, and vendor loggers.
@@ -150,19 +157,16 @@ class MyRobot(commands2.TimedCommandRobot):
         self.__timing.start("userCode")
 
     def testInit(self) -> None:
-        """Test mode runs the test picked on the dashboard's Characterization chooser.
+        """Test mode: hold A to run the test picked on the Characterization chooser.
 
-        The default is the module check (every wheel points at 0, 90 and 180
-        degrees in turn). See commands/drive/characterization.py for the others.
+        Nothing moves until A is held, and letting go stops the test. B and
+        the left bumper step through the chooser. See
+        commands/drive/characterization.py for the tests.
         """
         self.__timing.reset_all()
-        self.test_command = self.characterization.selected()
-        self.test_command.schedule()
 
     def testExit(self) -> None:
-        if self.test_command is not None:
-            self.test_command.cancel()
-            self.test_command = None
+        self.characterization.stop()
 
     def testPeriodic(self) -> None:
         self.__timing.start("userCode")

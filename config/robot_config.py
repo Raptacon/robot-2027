@@ -172,7 +172,7 @@ class SteerFeedforward:
 DRIVE_SYSID = SysIdSettings(ramp_volts_per_s=1.0, step_volts=6.0, timeout_s=5.0, dynamic_timeout_s=2.0)
 """Default drive SysId settings. At these values each test drives the robot up
 to about 5 m, so start with the robot at one end of a long clear stretch of
-carpet. The reverse tests drive it back. Disable at any time to stop."""
+carpet. The reverse tests drive it back. Let go of the run button to stop."""
 
 STEER_SYSID = SysIdSettings(ramp_volts_per_s=1.0, step_volts=4.0, timeout_s=6.0, dynamic_timeout_s=2.0)
 """Default steer SysId settings (robot on blocks, wheels off the ground)."""
