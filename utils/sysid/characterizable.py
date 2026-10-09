@@ -33,10 +33,28 @@ Example:
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from enum import Enum
 
 import commands2
 
 from utils.sysid.settings import SysIdSettings
+
+
+class Gravity(Enum):
+    """What gravity does to a mechanism, so the fit can measure kG.
+
+    - ``NONE``: gravity doesn't push it along its travel (a drivetrain, a
+      flywheel, a turret, swerve steering).
+    - ``ELEVATOR``: gravity pulls with the same force everywhere (an
+      elevator, a linear lift). Run tests both up and down.
+    - ``ARM``: gravity pulls hardest when the arm sticks straight out. The
+      position must be in radians with 0 meaning level (horizontal), so set
+      the arm's encoder offset before characterizing it.
+    """
+
+    NONE = "none"
+    ELEVATOR = "elevator"
+    ARM = "arm"
 
 
 @dataclass(frozen=True)
@@ -67,6 +85,12 @@ class Characterizable:
         angular: ``True`` if position is in radians (it turns), ``False`` if
             in meters (it moves in a line).
         settings: The :class:`SysIdSettings` for this mechanism.
+        gravity: What gravity does to it (:class:`Gravity`). Swerve drive and
+            steer are ``Gravity.NONE``.
+        min_position: Reverse tests stop when the position gets this low
+            (meters or radians). Set it a little inside the mechanism's hard
+            stop. ``None`` for something that can turn forever, like a wheel.
+        max_position: Forward tests stop when the position gets this high.
     """
 
     name: str
@@ -75,3 +99,31 @@ class Characterizable:
     read: Callable[[], Reading]
     angular: bool = False
     settings: SysIdSettings = SysIdSettings()
+    gravity: Gravity = Gravity.NONE
+    min_position: float | None = None
+    max_position: float | None = None
+
+    def past_limit(self, position: float, forward: bool) -> bool:
+        """``True`` if a test moving forward (or in reverse) has reached its position limit.
+
+        Args:
+            position: The current position, meters or radians.
+            forward: ``True`` for a forward (positive volts) test.
+
+        Example:
+            >>> import commands2
+            >>> from utils.sysid.characterizable import Characterizable, Reading
+            >>> arm = Characterizable(
+            ...     name="arm",
+            ...     subsystem=commands2.Subsystem(),
+            ...     set_voltage=lambda volts: None,
+            ...     read=lambda: Reading(0.0, 0.0, 0.0),
+            ...     min_position=-0.2,
+            ...     max_position=1.4,
+            ... )
+            >>> arm.past_limit(1.5, forward=True), arm.past_limit(1.5, forward=False)
+            (True, False)
+        """
+        if forward:
+            return self.max_position is not None and position >= self.max_position
+        return self.min_position is not None and position <= self.min_position

@@ -59,6 +59,8 @@ class SysIdTests:
         log_to_wpilog: Write readings to the wpilog for the SysId app.
             Defaults to ``True`` on the real robot and ``False`` in simulation,
             so tests don't leave log files behind.
+        fit_ka: ``False`` to leave kA out of the dashboard estimate (for a
+            slow-ramp-only test, where kA can't be measured).
 
     Attributes:
         mechanism: The mechanism being tested.
@@ -71,9 +73,11 @@ class SysIdTests:
         mechanism: Characterizable,
         period_s: float = 0.02,
         log_to_wpilog: bool | None = None,
+        fit_ka: bool = True,
     ) -> None:
         self.mechanism = mechanism
         self.period_s = period_s
+        self.fit_ka = fit_ka
         self.log_to_wpilog = wpilib.RobotBase.isReal() if log_to_wpilog is None else log_to_wpilog
         self.runs: list[list[Reading]] = []
         self.estimate: FeedforwardFit | None = None
@@ -92,6 +96,7 @@ class SysIdTests:
         self._ks_pub = table.getDoubleTopic("ks").publish()
         self._kv_pub = table.getDoubleTopic("kv").publish()
         self._ka_pub = table.getDoubleTopic("ka").publish()
+        self._kg_pub = table.getDoubleTopic("kg").publish()
         self._r2_pub = table.getDoubleTopic("rSquared").publish()
 
     # -- Commands -----------------------------------------------------------
@@ -105,7 +110,7 @@ class SysIdTests:
         Returns:
             A command that settles, runs the test, then updates the estimate.
         """
-        return self._wrap(self._routine.quasistatic(_direction(forward)))
+        return self._wrap(self._routine.quasistatic(_direction(forward)), forward)
 
     def dynamic(self, forward: bool = True) -> commands2.Command:
         """The dynamic (voltage step) test.
@@ -117,7 +122,8 @@ class SysIdTests:
             A command that settles, runs the test, then updates the estimate.
         """
         test = self._routine.dynamic(_direction(forward))
-        return self._wrap(test.withTimeout(self.mechanism.settings.dynamic_timeout_s).withName(test.getName()))
+        timed = test.withTimeout(self.mechanism.settings.dynamic_timeout_s).withName(test.getName())
+        return self._wrap(timed, forward)
 
     def all_tests(self) -> commands2.Command:
         """All four tests in a row: quasistatic forward, reverse, then dynamic forward, reverse."""
@@ -140,18 +146,25 @@ class SysIdTests:
 
     # -- Internals ------------------------------------------------------------
 
-    def _wrap(self, test: commands2.Command) -> commands2.Command:
-        """Start a new run, hold 0 V to settle, run ``test``, then hold 0 V and update the estimate."""
+    def _wrap(self, test: commands2.Command, forward: bool) -> commands2.Command:
+        """Start a new run, hold 0 V to settle, run ``test`` (stopping at a position limit),
+        then hold 0 V and update the estimate."""
         subsystem = self.mechanism.subsystem
         settle = self.mechanism.settings.settle_s
         return (
             subsystem.runOnce(lambda: self.runs.append([]))
             .andThen(subsystem.run(lambda: self._drive(0.0)).withTimeout(settle))
-            .andThen(test)
+            .andThen(test.until(lambda: self._at_limit(forward)))
             .andThen(subsystem.run(lambda: self._drive(0.0)).withTimeout(PAUSE_BETWEEN_TESTS_S))
             .finallyDo(lambda interrupted: self._update_estimate())
             .withName(test.getName())
         )
+
+    def _at_limit(self, forward: bool) -> bool:
+        if not self.mechanism.past_limit(self.mechanism.read().position, forward):
+            return False
+        log.warning("SysId %s: stopped at its position limit", self.mechanism.name)
+        return True
 
     def _drive(self, volts: float) -> None:
         limit = self.mechanism.settings.max_volts
@@ -173,7 +186,7 @@ class SysIdTests:
 
     def _update_estimate(self) -> None:
         try:
-            fit = fit_feedforward(self.runs, self.period_s)
+            fit = fit_feedforward(self.runs, self.period_s, self.mechanism.gravity, self.fit_ka)
         except ValueError as error:
             log.info("SysId %s: no estimate yet (%s)", self.mechanism.name, error)
             return
@@ -181,13 +194,15 @@ class SysIdTests:
         self._ks_pub.set(fit.ks)
         self._kv_pub.set(fit.kv)
         self._ka_pub.set(fit.ka)
+        self._kg_pub.set(fit.kg)
         self._r2_pub.set(fit.r_squared)
         log.info(
-            "SysId %s estimate: kS=%.3f kV=%.3f kA=%.3f (r^2=%.3f, %d readings)",
+            "SysId %s estimate: kS=%.3f kV=%.3f kA=%.3f kG=%.3f (r^2=%.3f, %d readings)",
             self.mechanism.name,
             fit.ks,
             fit.kv,
             fit.ka,
+            fit.kg,
             fit.r_squared,
             fit.samples,
         )

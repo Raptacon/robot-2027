@@ -84,11 +84,11 @@ def test_letting_go_of_a_stops_the_test(control, robot):
         enable_test_mode(control)
         hold_a(stick, True)
         step(3.0)
-        assert robot.drivetrain.measured_speeds.omega_rad_per_s > 0.5  # spinning in place
+        assert robot.drivetrain.measured_speeds.omega_rad_per_s > 0.1  # spinning in place, speeding up slowly
         hold_a(stick, False)
         step(0.5)
         assert robot.characterization.running is None
-        assert abs(robot.drivetrain.measured_speeds.omega_rad_per_s) < 0.1
+        assert abs(robot.drivetrain.measured_speeds.omega_rad_per_s) < 0.02
     publisher.close()
 
 

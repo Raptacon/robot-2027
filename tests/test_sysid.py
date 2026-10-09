@@ -15,7 +15,7 @@ import pytest
 from wpilib.simulation import DriverStationSim, pauseTiming, resumeTiming, stepTiming
 
 from subsystem.drivetrain.io.sim_motor import SimMotor
-from utils.sysid.characterizable import Characterizable, Reading
+from utils.sysid.characterizable import Characterizable, Gravity, Reading
 from utils.sysid.chooser import CharacterizationChooser
 from utils.sysid.fit import fit_feedforward
 from utils.sysid.routines import SysIdTests
@@ -68,14 +68,36 @@ class FakeMotor(commands2.Subsystem):
     def read(self):
         return Reading(self.volts, self.motor.position, self.motor.velocity)
 
-    def mechanism(self, settings=None):
+    def mechanism(self, settings=None, **options):
         return Characterizable(
             name="fake",
             subsystem=self,
             set_voltage=self.set_voltage,
             read=self.read,
             settings=settings or SysIdSettings(timeout_s=4.0, dynamic_timeout_s=1.5),
+            **options,
         )
+
+
+class FakeLift(FakeMotor):
+    """A :class:`FakeMotor` that gravity pulls on: an elevator or an arm.
+
+    For an arm the position is in radians with 0 meaning level.
+    """
+
+    def __init__(self, gravity, kg=0.8, start_position=0.0, **gains):
+        super().__init__(**gains)
+        self.gravity = gravity
+        self.kg = kg
+        self.motor.position = start_position
+
+    def periodic(self):
+        for _ in range(20):
+            pull = self.kg if self.gravity == Gravity.ELEVATOR else self.kg * math.cos(self.motor.position)
+            self.motor.step(self.volts - pull, 0.001)
+
+    def mechanism(self, settings=None, **options):
+        return super().mechanism(settings, gravity=self.gravity, **options)
 
 
 class TestFit:
@@ -100,6 +122,23 @@ class TestFit:
     def test_too_few_readings_raise(self):
         with pytest.raises(ValueError):
             fit_feedforward([[Reading(1.0, 0.0, 1.0)] * 3], 0.02)
+
+    def test_without_ka_fits_only_ks_and_kv(self):
+        run = [Reading(0.3 + 2.0 * v, 0.0, v) for v in (0.1 * i for i in range(1, 30))]
+        fit = fit_feedforward([run], 0.02, fit_ka=False)
+        assert fit.ks == pytest.approx(0.3)
+        assert fit.kv == pytest.approx(2.0)
+        assert fit.ka == 0.0
+
+    def test_arm_kg_follows_the_angle(self):
+        # An arm sweeping from below level to above it, at changing speeds.
+        angles = [-1.0 + 0.04 * i for i in range(60)]
+        speeds = [0.5 + 0.3 * math.sin(i / 7) for i in range(60)]
+        run = [Reading(0.7 * math.cos(a) + 0.2 + 1.5 * v, a, v) for a, v in zip(angles, speeds)]
+        fit = fit_feedforward([run], 0.02, gravity=Gravity.ARM, fit_ka=False)
+        assert fit.kg == pytest.approx(0.7)
+        assert fit.ks == pytest.approx(0.2)
+        assert fit.kv == pytest.approx(1.5)
 
     def test_a_mechanism_that_never_moved_raises(self):
         with pytest.raises(ValueError):
@@ -155,6 +194,42 @@ class TestRoutines:
 
     def test_writes_no_log_files_in_simulation(self):
         assert SysIdTests(FakeMotor().mechanism()).log_to_wpilog is False
+
+
+class TestGravityAndLimits:
+    def test_elevator_kg(self, scheduler):
+        lift = FakeLift(Gravity.ELEVATOR, kg=0.8, ks=0.3, kv=2.0, ka=0.4)
+        tests = SysIdTests(lift.mechanism())
+        run_until_done(scheduler, tests.all_tests())
+        assert tests.estimate is not None
+        assert tests.estimate.kg == pytest.approx(0.8, abs=0.05)
+        assert tests.estimate.ks == pytest.approx(0.3, abs=0.05)
+        assert tests.estimate.kv == pytest.approx(2.0, rel=0.05)
+
+    def test_arm_kg(self, scheduler):
+        # Starts hanging down and swings up, stopping before straight up.
+        arm = FakeLift(Gravity.ARM, kg=0.8, start_position=-1.5, ks=0.3, kv=2.0, ka=0.4)
+        settings = SysIdSettings(ramp_volts_per_s=0.5, step_volts=2.0, timeout_s=8.0, dynamic_timeout_s=1.0)
+        tests = SysIdTests(arm.mechanism(settings, min_position=-1.55, max_position=1.2))
+        run_until_done(scheduler, tests.quasistatic(forward=True))
+        run_until_done(scheduler, tests.dynamic(forward=False))
+        assert tests.estimate is not None
+        assert tests.estimate.kg == pytest.approx(0.8, abs=0.08)
+        assert tests.estimate.kv == pytest.approx(2.0, rel=0.1)
+
+    def test_stops_at_the_position_limit(self, scheduler):
+        fake = FakeMotor()
+        tests = SysIdTests(fake.mechanism(SysIdSettings(ramp_volts_per_s=2.0, timeout_s=20.0), max_position=1.0))
+        seconds = run_until_done(scheduler, tests.quasistatic(forward=True))
+        assert seconds < 15.0  # well before the 20 s timeout
+        assert 1.0 <= tests.runs[-1][-1].position < 1.1  # the last reading is just past the limit
+        assert fake.volts == 0.0
+
+    def test_reverse_limit_does_not_stop_a_forward_test(self, scheduler):
+        fake = FakeMotor()
+        tests = SysIdTests(fake.mechanism(SysIdSettings(ramp_volts_per_s=2.0, timeout_s=2.0), min_position=0.0))
+        run_until_done(scheduler, tests.quasistatic(forward=True))
+        assert max(fake.requested) == pytest.approx(4.0, abs=0.05)  # ran to its timeout
 
 
 class TestChooser:

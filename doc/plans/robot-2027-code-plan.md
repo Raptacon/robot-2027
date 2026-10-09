@@ -187,10 +187,10 @@ Two rules keep it cheap in Python: read each signal once per loop into the input
 
 One SysId helper serves every mechanism, so the swerve is just its first user. A mechanism registers how to apply voltage and read position and velocity, and gets the four SysId tests as commands on a "Characterization" chooser.
 
-- `utils/sysid/characterizable.py`: a small description of a mechanism (`set_voltage`, `read` returning applied volts, position and velocity, linear or angular units, and `SysIdSettings` safe limits).
+- `utils/sysid/characterizable.py`: a small description of a mechanism (`set_voltage`, `read` returning applied volts, position and velocity, linear or angular units, and `SysIdSettings` safe limits). It also says what gravity does (none, elevator or arm, so the fit adds kG) and can set position limits that end a test before a hard stop.
 - `utils/sysid/routines.py`: builds `commands2.sysid.SysIdRoutine` quasistatic and dynamic tests from that description, with ramp rate, step voltage and timeouts from config; logs to wpilog in the format the SysId tool reads (real robot only), and publishes a quick kS/kV/kA estimate (`utils/sysid/fit.py`) after each test.
-- `utils/sysid/chooser.py`: collects every registered mechanism into one dashboard chooser; test mode runs the picked option (the module check by default).
-- Swerve registers three: drive (all wheels locked at 0°, on carpet), steer (on blocks), and a wheel-radius routine that isn't SysId but lives on the same chooser.
+- `utils/sysid/chooser.py`: collects every registered mechanism into one dashboard chooser; in test mode, holding A runs the picked option (the module check by default) and letting go stops it.
+- Swerve registers drive (all wheels locked at 0°, on carpet), a slow-ramp drive kS/kV test (6328's method), steer (on blocks), and wheel-radius and steer-step routines that aren't SysId but live on the same chooser.
 - Later mechanisms (shooter flywheel, turret, arm) register the same way, replacing the separate `examples/*-sysid` robots.
 
 ## 9. Docs in the repo

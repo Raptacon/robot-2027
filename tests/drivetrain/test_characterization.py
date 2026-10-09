@@ -95,6 +95,21 @@ class TestDriveSysId:
         assert abs(sim.true_pose.x_m) < 0.5
 
 
+class TestSlowRampDrive:
+    def test_measures_kv_without_ka(self, scheduler):
+        sim = make_sim(scheduler)
+        chooser = CharacterizationChooser("none", commands2.InstantCommand())
+        tests = register_swerve(chooser, sim.drivetrain)
+        assert "Drive feedforward (slow)" in chooser.names
+        run_until_done(scheduler, tests["driveSlowRamp"].quasistatic(forward=True))
+        io = sim.module_sims[0]
+        fit = tests["driveSlowRamp"].estimate
+        assert fit is not None
+        assert fit.kv == pytest.approx(io._drive.kv / io._drive_m_per_rot, rel=0.03)
+        assert fit.ka == 0.0
+        assert 1.0 < sim.true_pose.x_m < 6.0  # creeps a few meters, fits in a hallway
+
+
 class TestSteerSysId:
     def test_measures_the_simulated_steer_motors(self, scheduler):
         sim = make_sim(scheduler)

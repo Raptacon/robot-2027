@@ -169,10 +169,13 @@ class SteerFeedforward:
     ka_volts_per_rad_per_s2: float | None = None
 
 
-DRIVE_SYSID = SysIdSettings(ramp_volts_per_s=1.0, step_volts=6.0, timeout_s=5.0, dynamic_timeout_s=2.0)
+DRIVE_SYSID = SysIdSettings(ramp_volts_per_s=1.0, step_volts=4.0, timeout_s=5.0, dynamic_timeout_s=2.0)
 """Default drive SysId settings. At these values each test drives the robot up
 to about 5 m, so start with the robot at one end of a long clear stretch of
-carpet. The reverse tests drive it back. Let go of the run button to stop."""
+carpet. The reverse tests drive it back. Let go of the run button to stop.
+
+The step is 4 V, not WPILib's 7 V: a big step makes the wheels slip and the
+battery sag, which spoils kA. CTRE's swerve example uses 4 V for the same reason."""
 
 STEER_SYSID = SysIdSettings(ramp_volts_per_s=1.0, step_volts=4.0, timeout_s=6.0, dynamic_timeout_s=2.0)
 """Default steer SysId settings (robot on blocks, wheels off the ground)."""

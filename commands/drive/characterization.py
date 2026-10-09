@@ -12,8 +12,9 @@ The tests, and where the robot must be:
 Chooser option              Robot               What it measures
 ==========================  ==================  =========================================
 SysId drive: ...            on carpet, clear    drive kS, kV, kA (wheels locked straight)
+Drive feedforward (slow)    on carpet, clear    drive kS, kV only, from a very slow ramp
 SysId steer: ...            on blocks           steer kS, kV, kA
-Wheel radius                on carpet           real wheel radius (spins in place 2 turns)
+Wheel radius                on carpet           real wheel radius (spins slowly in place)
 Steer step test             on blocks           how fast and cleanly the wheels turn 90 deg
 ==========================  ==================  =========================================
 
@@ -23,10 +24,17 @@ Where the results go:
       ``drive_feedforward`` or ``steer_feedforward`` in the robot's config file.
       A quick estimate also shows on the dashboard under
       ``/Characterization/<drive or steer>/estimate/``.
+    - Drive feedforward (slow): ``/Characterization/driveSlowRamp/estimate/``
+      has kS and kV straight away, no SysId app needed. Many top teams
+      (6328 among them) use this for drive kS and kV and only use the SysId
+      app for kA. If it and the SysId app disagree a lot, look at the data
+      before trusting either.
     - Wheel radius: ``/Characterization/WheelRadius/radius_m``; copy it into
       ``wheel_radius_m``.
     - Steer step test: ``/Characterization/SteerStep/<corner>/``; use it to
-      tune ``steer_kp`` and ``steer_kd`` in ``SparkSettings``.
+      tune ``steer_kp`` and ``steer_kd`` in ``SparkSettings``. SysId only
+      measures the steer feedforward. The SysId app's feedback panel can
+      suggest a starting kP; check it with this test.
 
     Log every change in doc/swerve/calibration-log.md.
 
@@ -44,11 +52,12 @@ Example:
     >>> chooser = CharacterizationChooser("Do nothing", commands2.InstantCommand())
     >>> tests = register_swerve(chooser, sim.drivetrain)
     >>> sorted(tests)
-    ['drive', 'steer']
+    ['drive', 'driveSlowRamp', 'steer']
     >>> "Wheel radius" in chooser.names
     True
 """
 
+import dataclasses
 import logging
 import math
 import statistics
@@ -60,6 +69,7 @@ from subsystem.drivetrain.drivetrain import Drivetrain
 from subsystem.drivetrain.io.gyro_io_onboard import YawUnwrapper
 from subsystem.drivetrain.swerve_math import ChassisSpeeds
 from utils.sysid.characterizable import Characterizable, Reading
+from utils.sysid.settings import SysIdSettings
 from utils.sysid.chooser import CharacterizationChooser
 from utils.sysid.routines import SysIdTests
 
@@ -132,6 +142,28 @@ def steer_mechanism(drivetrain: Drivetrain) -> Characterizable:
     )
 
 
+SLOW_RAMP_SETTINGS = SysIdSettings(ramp_volts_per_s=0.1, timeout_s=15.0)
+"""The slow drive ramp: 0.1 V/s for up to 15 s (team 6328's ramp rate).
+
+The robot creeps forward a few meters. At this ramp it barely accelerates,
+so kS and kV come out clean, but kA can't be measured."""
+
+
+def slow_ramp_drive_mechanism(drivetrain: Drivetrain) -> Characterizable:
+    """The drive motors, set up for the slow-ramp kS and kV test.
+
+    Same as :func:`drive_mechanism` but named ``"driveSlowRamp"`` (so its
+    estimate and log are kept apart) and using :data:`SLOW_RAMP_SETTINGS`.
+
+    Args:
+        drivetrain: The drivetrain.
+
+    Returns:
+        A :class:`~utils.sysid.characterizable.Characterizable`.
+    """
+    return dataclasses.replace(drive_mechanism(drivetrain), name="driveSlowRamp", settings=SLOW_RAMP_SETTINGS)
+
+
 # -- Wheel radius -------------------------------------------------------------
 
 
@@ -149,20 +181,21 @@ class WheelRadiusCharacterization(commands2.Command):
 
     Args:
         drivetrain: The drivetrain.
-        spin_rad_per_s: How fast to spin, rad/s. Slow keeps the wheels from slipping.
+        spin_rad_per_s: How fast to spin, rad/s. Slow keeps the wheels from
+            slipping; 0.25 rad/s is what team 6328 uses.
         turns: How many full turns to measure over.
 
     Attributes:
         radius_m: The measured wheel radius in meters, or ``None`` until a run finishes.
     """
 
-    RAMP_RAD_PER_S2 = 0.5
+    RAMP_RAD_PER_S2 = 0.05
     """How fast the spin speeds up, rad/s per second, so the wheels don't slip at the start."""
 
     SETTLE_S = 1.0
     """Seconds at full spin speed before measuring starts."""
 
-    def __init__(self, drivetrain: Drivetrain, spin_rad_per_s: float = 1.0, turns: float = 2.0) -> None:
+    def __init__(self, drivetrain: Drivetrain, spin_rad_per_s: float = 0.25, turns: float = 1.0) -> None:
         super().__init__()
         self.drivetrain = drivetrain
         self.spin_rad_per_s = spin_rad_per_s
@@ -371,7 +404,8 @@ def register_swerve(chooser: CharacterizationChooser, drivetrain: Drivetrain) ->
         drivetrain: The drivetrain.
 
     Returns:
-        The drive and steer :class:`~utils.sysid.routines.SysIdTests`, by name,
+        The ``drive``, ``driveSlowRamp`` and ``steer``
+        :class:`~utils.sysid.routines.SysIdTests`, by name,
         so the robot (or a test) can read their estimates.
     """
     period = drivetrain.loop_period_s
@@ -381,6 +415,9 @@ def register_swerve(chooser: CharacterizationChooser, drivetrain: Drivetrain) ->
     }
     for sysid in tests.values():
         chooser.add_sysid(sysid)
+    slow = SysIdTests(slow_ramp_drive_mechanism(drivetrain), period_s=period, fit_ka=False)
+    tests["driveSlowRamp"] = slow
+    chooser.add("Drive feedforward (slow)", slow.quasistatic(True))
     chooser.add("Wheel radius", WheelRadiusCharacterization(drivetrain))
     chooser.add("Steer step test", SteerStepTest(drivetrain))
     return tests
