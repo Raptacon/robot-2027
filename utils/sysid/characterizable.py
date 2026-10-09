@@ -91,6 +91,10 @@ class Characterizable:
             (meters or radians). Set it a little inside the mechanism's hard
             stop. ``None`` for something that can turn forever, like a wheel.
         max_position: Forward tests stop when the position gets this high.
+        max_travel: Every test stops once the mechanism has moved this far
+            from where the test started (meters or radians), whichever way
+            it went. Used for a drivetrain, which has no fixed position but
+            only so much room. ``None`` for no travel limit.
     """
 
     name: str
@@ -102,6 +106,7 @@ class Characterizable:
     gravity: Gravity = Gravity.NONE
     min_position: float | None = None
     max_position: float | None = None
+    max_travel: float | None = None
 
     def past_limit(self, position: float, forward: bool) -> bool:
         """``True`` if a test moving forward (or in reverse) has reached its position limit.
@@ -127,3 +132,25 @@ class Characterizable:
         if forward:
             return self.max_position is not None and position >= self.max_position
         return self.min_position is not None and position <= self.min_position
+
+    def travelled_too_far(self, position: float, start: float) -> bool:
+        """``True`` if the mechanism has moved :attr:`max_travel` or more since ``start``.
+
+        Args:
+            position: The current position, meters or radians.
+            start: The position when the test started.
+
+        Example:
+            >>> import commands2
+            >>> from utils.sysid.characterizable import Characterizable, Reading
+            >>> drive = Characterizable(
+            ...     name="drive",
+            ...     subsystem=commands2.Subsystem(),
+            ...     set_voltage=lambda volts: None,
+            ...     read=lambda: Reading(0.0, 0.0, 0.0),
+            ...     max_travel=4.0,
+            ... )
+            >>> drive.travelled_too_far(10.0, start=7.0), drive.travelled_too_far(2.5, start=7.0)
+            (False, True)
+        """
+        return self.max_travel is not None and abs(position - start) >= self.max_travel

@@ -16,8 +16,8 @@ import pytest
 import wpilib
 from wpilib.simulation import DriverStationSim, pauseTiming, resumeTiming, stepTiming
 
-from subsystem.drivetrain.io.sim_motor import SimMotor
-from utils.sysid.characterizable import Characterizable, Gravity, Reading
+from sysid_fakes import FakeMotor, run_until_done
+from utils.sysid.characterizable import Gravity, Reading
 from utils.sysid.chooser import CharacterizationChooser
 from utils.sysid.fit import fit_feedforward
 from utils.sysid.routines import SysIdTests
@@ -37,48 +37,6 @@ def scheduler():
     DriverStationSim.resetData()
     DriverStationSim.notifyNewData()
     resumeTiming()
-
-
-def run_until_done(scheduler, command, max_s=60.0):
-    """Schedule ``command`` and run 20 ms loops until it finishes. Returns the seconds it took."""
-    command.schedule()
-    loops = 0
-    while scheduler.isScheduled(command) and loops < max_s / 0.02:
-        stepTiming(0.02)
-        scheduler.run()
-        loops += 1
-    return loops * 0.02
-
-
-class FakeMotor(commands2.Subsystem):
-    """A motor on its own, simulated with :class:`SimMotor`, that remembers every voltage asked for."""
-
-    def __init__(self, ks=0.3, kv=2.0, ka=0.4):
-        super().__init__()
-        self.motor = SimMotor(kv=kv, ka=ka, ks=ks)
-        self.volts = 0.0
-        self.requested: list[float] = []
-
-    def set_voltage(self, volts):
-        self.volts = volts
-        self.requested.append(volts)
-
-    def periodic(self):
-        for _ in range(20):
-            self.motor.step(self.volts, 0.001)
-
-    def read(self):
-        return Reading(self.volts, self.motor.position, self.motor.velocity)
-
-    def mechanism(self, settings=None, **options):
-        return Characterizable(
-            name="fake",
-            subsystem=self,
-            set_voltage=self.set_voltage,
-            read=self.read,
-            settings=settings or SysIdSettings(timeout_s=4.0, dynamic_timeout_s=1.5),
-            **options,
-        )
 
 
 class FakeLift(FakeMotor):

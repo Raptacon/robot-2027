@@ -91,6 +91,8 @@ class SysIdTests:
         self.tunable = TunableSettings(mechanism.name, mechanism.settings)
         # The settings of the test running now (or the last one).
         self._settings = mechanism.settings
+        # Where the running test started, for the travel limit.
+        self._start_position = 0.0
         table = ntcore.NetworkTableInstance.getDefault().getTable(f"/Characterization/{mechanism.name}/estimate")
         self._ks_pub = table.getDoubleTopic("ks").publish()
         self._kv_pub = table.getDoubleTopic("kv").publish()
@@ -175,24 +177,32 @@ class SysIdTests:
         )
 
     def _wrap(self, test: commands2.Command, forward: bool) -> commands2.Command:
-        """Start a new run, hold 0 V to settle, run ``test`` (stopping at a position limit),
+        """Start a new run, hold 0 V to settle, run ``test`` (stopping at a position or travel limit),
         then hold 0 V and update the estimate."""
         subsystem = self.mechanism.subsystem
         settle = self._settings.settle_s
         return (
             subsystem.runOnce(lambda: self.runs.append([]))
             .andThen(subsystem.run(lambda: self._drive(0.0)).withTimeout(settle))
+            .andThen(subsystem.runOnce(self._mark_start))
             .andThen(test.until(lambda: self._at_limit(forward)))
             .andThen(subsystem.run(lambda: self._drive(0.0)).withTimeout(PAUSE_BETWEEN_TESTS_S))
             .finallyDo(lambda interrupted: self._update_estimate())
             .withName(test.getName())
         )
 
+    def _mark_start(self) -> None:
+        self._start_position = self.mechanism.read().position
+
     def _at_limit(self, forward: bool) -> bool:
-        if not self.mechanism.past_limit(self.mechanism.read().position, forward):
-            return False
-        log.warning("SysId %s: stopped at its position limit", self.mechanism.name)
-        return True
+        position = self.mechanism.read().position
+        if self.mechanism.past_limit(position, forward):
+            log.warning("SysId %s: stopped at its position limit", self.mechanism.name)
+            return True
+        if self.mechanism.travelled_too_far(position, self._start_position):
+            log.warning("SysId %s: stopped after moving its travel limit", self.mechanism.name)
+            return True
+        return False
 
     def _drive(self, volts: float) -> None:
         limit = self._settings.max_volts
