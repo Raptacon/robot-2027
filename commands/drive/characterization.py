@@ -18,6 +18,10 @@ Wheel radius                on carpet           real wheel radius (spins slowly 
 Steer step test             on blocks           how fast and cleanly the wheels turn 90 deg
 ==========================  ==================  =========================================
 
+Each SysId mechanism's ramp, step and timeouts can be changed on the
+dashboard under ``/Characterization/<name>/settings/``, or loaded from the
+``SysId <name> preset`` chooser (see :mod:`utils.sysid.tunable`).
+
 Where the results go:
     - SysId: open the wpilog in the WPILib SysId app ("General Mechanism",
       the ``drive`` or ``steer`` motor) and copy kS, kV and kA into
@@ -418,6 +422,7 @@ def register_swerve(chooser: CharacterizationChooser, drivetrain: Drivetrain) ->
     slow = SysIdTests(slow_ramp_drive_mechanism(drivetrain), period_s=period, fit_ka=False)
     tests["driveSlowRamp"] = slow
     chooser.add("Drive feedforward (slow)", slow.quasistatic(True))
+    chooser.add_settings(slow.tunable)
     chooser.add("Wheel radius", WheelRadiusCharacterization(drivetrain))
     chooser.add("Steer step test", SteerStepTest(drivetrain))
     return tests

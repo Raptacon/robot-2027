@@ -73,6 +73,7 @@ In robot-2027 the "Steer step test" chooser option does steps 2 and 5 for you an
 Getting numbers you can use (what went wrong for us before, and what top teams do):
 
 - **Run "Drive feedforward (slow)" first.** It ramps at 0.1 V/s (6328's rate) and shows kS and kV on the dashboard under `/Characterization/driveSlowRamp/estimate/` with no SysId app. 6328 takes drive kS and kV from this and only uses the SysId app for kA.
+- **Change settings from the dashboard.** Each mechanism's ramp, step and timeouts are under `/Characterization/<name>/settings/`, and the `SysId <name> preset` chooser loads a set at once (Config default, Gentle, Slow ramp). The next test uses them. They reset to the config file when the code restarts, so copy settings that worked into the config.
 - **Keep the dynamic step small.** robot-2027 uses 4 V for drive, not WPILib's 7 V. A big step slips the wheels and sags the battery, and kA comes out wrong.
 - **One routine per log, each test once.** Restart the robot code (new wpilog) before characterizing a different mechanism, and don't repeat a test in the same log (WPILib's SysId docs ask for each test once per log).
 - **Fresh, fully charged battery,** and leave room: the tests stop the moment you let go of A, so let go before a wall, not at it.

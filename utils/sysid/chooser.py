@@ -30,6 +30,7 @@ import wpilib
 from commands2.button import Trigger
 
 from utils.sysid.routines import SysIdTests
+from utils.sysid.tunable import TunableSettings
 
 log = logging.getLogger(__name__)
 
@@ -66,6 +67,7 @@ class CharacterizationChooser:
         self._chooser.setDefaultOption(default_name, default_name)
         self.names = [default_name]
         self.running: commands2.Command | None = None
+        self._tunables: list[TunableSettings] = []
         self._selected_pub = (
             ntcore.NetworkTableInstance.getDefault()
             .getStringTopic(f"/SmartDashboard/{DASHBOARD_KEY}/selected")
@@ -89,6 +91,15 @@ class CharacterizationChooser:
         """Add a mechanism's SysId tests, named like ``"SysId drive: dynamic forward"``."""
         for test_name, command in tests.commands().items():
             self.add(f"SysId {tests.mechanism.name}: {test_name}", command)
+        self.add_settings(tests.tunable)
+
+    def add_settings(self, tunable: TunableSettings) -> None:
+        """Show a mechanism's SysId settings preset chooser when :meth:`publish` is called.
+
+        :meth:`add_sysid` does this already; use it for a SysId test added
+        with :meth:`add` under its own name.
+        """
+        self._tunables.append(tunable)
 
     @property
     def selected_name(self) -> str:
@@ -150,5 +161,7 @@ class CharacterizationChooser:
             previous_option.and_(in_test).onTrue(commands2.InstantCommand(lambda: self.step(-1)))
 
     def publish(self) -> None:
-        """Show the chooser on the dashboard as ``Characterization``."""
+        """Show the chooser on the dashboard as ``Characterization``, and each SysId preset chooser."""
         wpilib.SmartDashboard.putData(DASHBOARD_KEY, self._chooser)
+        for tunable in self._tunables:
+            tunable.publish()

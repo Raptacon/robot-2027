@@ -17,6 +17,9 @@ They also run in simulation, which is how CI checks them; there nothing is
 written to disk, so test runs don't leave log files behind. Either way, after each test the dashboard shows a quick estimate under
 ``/Characterization/<name>/estimate/`` (see :mod:`utils.sysid.fit`).
 
+The ramp, step and timeouts can be changed on the dashboard before each test
+(see :mod:`utils.sysid.tunable`); each test reads them when it starts.
+
 Example:
     >>> import commands2
     >>> from utils.sysid.characterizable import Characterizable, Reading
@@ -34,6 +37,7 @@ Example:
 
 import logging
 import math
+from collections.abc import Callable
 
 import commands2
 import ntcore
@@ -43,6 +47,8 @@ from wpilib.sysid import SysIdRoutineLog
 
 from utils.sysid.characterizable import Characterizable, Reading
 from utils.sysid.fit import FeedforwardFit, fit_feedforward
+from utils.sysid.settings import SysIdSettings
+from utils.sysid.tunable import TunableSettings
 
 log = logging.getLogger(__name__)
 
@@ -66,6 +72,7 @@ class SysIdTests:
         mechanism: The mechanism being tested.
         runs: The readings from each test run so far, one list per test.
         estimate: The latest quick fit, or ``None`` before the first test.
+        tunable: The dashboard copy of the mechanism's settings.
     """
 
     def __init__(
@@ -81,17 +88,9 @@ class SysIdTests:
         self.log_to_wpilog = wpilib.RobotBase.isReal() if log_to_wpilog is None else log_to_wpilog
         self.runs: list[list[Reading]] = []
         self.estimate: FeedforwardFit | None = None
-        settings = mechanism.settings
-        config = SysIdRoutine.Config(
-            rampRate=settings.ramp_volts_per_s,
-            stepVoltage=settings.step_volts,
-            timeout=settings.timeout_s,
-            # In simulation, keep the test state out of the wpilog too.
-            recordState=None if self.log_to_wpilog else (lambda state: None),
-        )
-        self._routine = SysIdRoutine(
-            config, SysIdRoutine.Mechanism(self._drive, self._log, mechanism.subsystem, mechanism.name)
-        )
+        self.tunable = TunableSettings(mechanism.name, mechanism.settings)
+        # The settings of the test running now (or the last one).
+        self._settings = mechanism.settings
         table = ntcore.NetworkTableInstance.getDefault().getTable(f"/Characterization/{mechanism.name}/estimate")
         self._ks_pub = table.getDoubleTopic("ks").publish()
         self._kv_pub = table.getDoubleTopic("kv").publish()
@@ -110,7 +109,7 @@ class SysIdTests:
         Returns:
             A command that settles, runs the test, then updates the estimate.
         """
-        return self._wrap(self._routine.quasistatic(_direction(forward)), forward)
+        return self._deferred(lambda routine: routine.quasistatic(_direction(forward)), forward)
 
     def dynamic(self, forward: bool = True) -> commands2.Command:
         """The dynamic (voltage step) test.
@@ -121,9 +120,11 @@ class SysIdTests:
         Returns:
             A command that settles, runs the test, then updates the estimate.
         """
-        test = self._routine.dynamic(_direction(forward))
-        timed = test.withTimeout(self.mechanism.settings.dynamic_timeout_s).withName(test.getName())
-        return self._wrap(timed, forward)
+        return self._deferred(
+            lambda routine: routine.dynamic(_direction(forward)).withTimeout(self._settings.dynamic_timeout_s),
+            forward,
+            dynamic=True,
+        )
 
     def all_tests(self) -> commands2.Command:
         """All four tests in a row: quasistatic forward, reverse, then dynamic forward, reverse."""
@@ -146,11 +147,38 @@ class SysIdTests:
 
     # -- Internals ------------------------------------------------------------
 
+    def _deferred(
+        self, make_test: Callable[[SysIdRoutine], commands2.Command], forward: bool, dynamic: bool = False
+    ) -> commands2.Command:
+        """A command that reads the dashboard settings when it starts, then builds and runs the test."""
+
+        def build() -> commands2.Command:
+            self._settings = self.tunable.current()
+            return self._wrap(make_test(self._routine(self._settings)), forward)
+
+        kind = "dynamic" if dynamic else "quasistatic"
+        direction = "forward" if forward else "reverse"
+        return commands2.DeferredCommand(build, self.mechanism.subsystem).withName(
+            f"SysId {self.mechanism.name}: {kind} {direction}"
+        )
+
+    def _routine(self, settings: SysIdSettings) -> SysIdRoutine:
+        config = SysIdRoutine.Config(
+            rampRate=settings.ramp_volts_per_s,
+            stepVoltage=settings.step_volts,
+            timeout=settings.timeout_s,
+            # In simulation, keep the test state out of the wpilog too.
+            recordState=None if self.log_to_wpilog else (lambda state: None),
+        )
+        return SysIdRoutine(
+            config, SysIdRoutine.Mechanism(self._drive, self._log, self.mechanism.subsystem, self.mechanism.name)
+        )
+
     def _wrap(self, test: commands2.Command, forward: bool) -> commands2.Command:
         """Start a new run, hold 0 V to settle, run ``test`` (stopping at a position limit),
         then hold 0 V and update the estimate."""
         subsystem = self.mechanism.subsystem
-        settle = self.mechanism.settings.settle_s
+        settle = self._settings.settle_s
         return (
             subsystem.runOnce(lambda: self.runs.append([]))
             .andThen(subsystem.run(lambda: self._drive(0.0)).withTimeout(settle))
@@ -167,7 +195,7 @@ class SysIdTests:
         return True
 
     def _drive(self, volts: float) -> None:
-        limit = self.mechanism.settings.max_volts
+        limit = self._settings.max_volts
         self.mechanism.set_voltage(max(-limit, min(limit, volts)))
 
     def _log(self, routine_log: SysIdRoutineLog) -> None:

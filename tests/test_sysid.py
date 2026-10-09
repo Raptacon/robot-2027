@@ -11,7 +11,9 @@ import importlib
 import math
 
 import commands2
+import ntcore
 import pytest
+import wpilib
 from wpilib.simulation import DriverStationSim, pauseTiming, resumeTiming, stepTiming
 
 from subsystem.drivetrain.io.sim_motor import SimMotor
@@ -232,6 +234,56 @@ class TestGravityAndLimits:
         assert max(fake.requested) == pytest.approx(4.0, abs=0.05)  # ran to its timeout
 
 
+def set_on_dashboard(name, field, value):
+    """Change a SysId setting the way the dashboard does."""
+    topic = ntcore.NetworkTableInstance.getDefault().getDoubleTopic(f"/Characterization/{name}/settings/{field}")
+    publisher = topic.publish()
+    publisher.set(value)
+    return publisher
+
+
+class TestDashboardSettings:
+    def test_dashboard_starts_with_the_config_values(self):
+        tests = SysIdTests(FakeMotor().mechanism(SysIdSettings(step_volts=3.0)))
+        assert tests.tunable.current() == SysIdSettings(step_volts=3.0)
+
+    def test_a_changed_step_is_used_by_the_next_test(self, scheduler):
+        fake = FakeMotor()
+        tests = SysIdTests(fake.mechanism(SysIdSettings(step_volts=3.0, dynamic_timeout_s=0.5)))
+        command = tests.dynamic()  # built before the change, like the chooser's commands
+        publisher = set_on_dashboard("fake", "step_volts", 2.0)
+        run_until_done(scheduler, command)
+        assert max(fake.requested) == pytest.approx(2.0)
+        publisher.close()
+
+    def test_volt_limit_cannot_be_raised_past_the_config(self, scheduler):
+        fake = FakeMotor()
+        tests = SysIdTests(fake.mechanism(SysIdSettings(step_volts=3.0, max_volts=3.0, dynamic_timeout_s=0.5)))
+        step = set_on_dashboard("fake", "step_volts", 9.0)
+        limit = set_on_dashboard("fake", "max_volts", 12.0)
+        run_until_done(scheduler, tests.dynamic())
+        assert max(fake.requested) == pytest.approx(3.0)
+        step.close()
+        limit.close()
+
+    def test_preset_loads_its_values(self):
+        tests = SysIdTests(FakeMotor().mechanism(SysIdSettings(ramp_volts_per_s=1.0, timeout_s=4.0)))
+        tests.tunable.load_preset("Slow ramp")
+        assert tests.tunable.current().ramp_volts_per_s == pytest.approx(0.1)
+        assert tests.tunable.current().timeout_s == pytest.approx(15.0)
+
+    def test_picking_a_preset_on_the_dashboard_loads_it(self):
+        tests = SysIdTests(FakeMotor().mechanism(SysIdSettings(step_volts=4.0)))
+        tests.tunable.publish()
+        wpilib.SmartDashboard.updateValues()
+        topic = ntcore.NetworkTableInstance.getDefault().getStringTopic("/SmartDashboard/SysId fake preset/selected")
+        publisher = topic.publish()
+        publisher.set("Gentle")
+        wpilib.SmartDashboard.updateValues()
+        assert tests.tunable.current().step_volts == pytest.approx(2.0)
+        publisher.close()
+
+
 class TestChooser:
     def test_default_is_selected(self):
         default = commands2.InstantCommand()
@@ -263,6 +315,7 @@ class TestChooser:
         "utils.sysid.fit",
         "utils.sysid.routines",
         "utils.sysid.chooser",
+        "utils.sysid.tunable",
     ],
 )
 def test_docstring_examples(module_name):
