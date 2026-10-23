@@ -14,7 +14,7 @@ def sim_drive():
 
     Takes the same arguments as ``SimDrive`` in ``sim_harness.py``.
     Skipped where Phoenix 6 or the NavX library isn't installed. Afterwards
-    everything is torn down so the next test can create the same CAN IDs.
+    the motors are stopped and the robot disabled for the next test.
     """
     from sim_harness import SimDrive
 
@@ -28,7 +28,7 @@ def sim_drive():
     yield make
 
     for sim in built:
-        sim.close()  # also drops the devices if a failed test's traceback still holds sim
+        sim.close()
     built.clear()
     DriverStationSim.setEnabled(False)
     DriverStationSim.notifyNewData()
