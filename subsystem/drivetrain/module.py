@@ -23,18 +23,21 @@ Seeding
     wheel, rather than driving it pointed the wrong way.
 
 Example:
-    >>> from config.robots.swerve_test_bot import CONFIG
-    >>> from subsystem.drivetrain.io.abs_encoder_sim import AbsoluteEncoderIOSim
-    >>> from subsystem.drivetrain.io.module_io_sim import ModuleIOSim, ModuleSimOptions
-    >>> from subsystem.drivetrain.module import SwerveModule
-    >>> from subsystem.drivetrain.swerve_math import ModuleTarget
-    >>> corner = CONFIG.corners[0]
-    >>> io = ModuleIOSim(CONFIG, ModuleSimOptions(initial_steer_angle_rad=0.7))
-    >>> module = SwerveModule(corner, CONFIG, io, AbsoluteEncoderIOSim.for_module(io, corner))
-    >>> module.periodic(disabled=True)  # first loop: seeds from the absolute encoder
-    >>> module.seeded, round(module.angle_rad, 3)
-    (True, 0.7)
-    >>> module.set_target(ModuleTarget(speed_mps=1.0, angle_rad=0.0))
+    ``build_drivetrain`` makes one module per corner like this (needs the
+    CAN devices or the simulator, so not run here; tests/drivetrain/test_module.py
+    has runnable examples):
+
+    .. code-block:: python
+
+        from subsystem.drivetrain.io.abs_encoder_cancoder import AbsoluteEncoderIOCANcoder
+        from subsystem.drivetrain.io.module_io_spark import ModuleIOSpark
+        from subsystem.drivetrain.module import SwerveModule
+        from subsystem.drivetrain.swerve_math import ModuleTarget
+
+        corner = CONFIG.corners[0]
+        module = SwerveModule(corner, CONFIG, ModuleIOSpark(CONFIG, corner), AbsoluteEncoderIOCANcoder(CONFIG, corner))
+        module.periodic(disabled=True)  # first loop: seeds from the absolute encoder
+        module.set_target(ModuleTarget(speed_mps=1.0, angle_rad=0.0))
 """
 
 import math
@@ -62,8 +65,9 @@ class SwerveModule:
     Args:
         corner: This module's corner config (name, position, offset).
         config: The whole robot config (gearing, feedforward).
-        io: The module's motors (real or simulated).
-        encoder: The module's absolute encoder (real or simulated).
+        io: The module's motors (for example :class:`~subsystem.drivetrain.io.module_io_spark.ModuleIOSpark`).
+        encoder: The module's absolute encoder (for example
+            :class:`~subsystem.drivetrain.io.abs_encoder_cancoder.AbsoluteEncoderIOCANcoder`).
         log_prefix: NetworkTables folder for this module's logged inputs.
 
     Attributes:

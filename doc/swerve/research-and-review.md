@@ -17,7 +17,7 @@ The teams whose swerve "just works" (6328, 254, 1690, and anyone using the CTRE 
 | Drivetrain subsystem | Kinematics, discretize, desaturate, pose estimator, high-rate odometry, field-relative math, PathPlanner hookup, SysId routines | Shape joystick input |
 | Commands | Teleop drive, heading lock, auto-align, characterization | Touch motor objects |
 
-**Why the IO split matters for us.** An IO interface (`ModuleIO` with `ModuleIOSpark`, `ModuleIOTalonFX`, `ModuleIOSim`) lets the same module code run on the real robot, in simulation with a real motor model, and with a different motor vendor. It's how AdvantageKit's templates work, and it ports to Python cleanly as an abstract base class.
+**Why the IO split matters for us.** An IO interface (`ModuleIO` with `ModuleIOSpark`, `ModuleIOTalonFX`, `ModuleIOSim`) lets the same module code run on the real robot, in simulation with a real motor model, and with a different motor vendor. It's how AdvantageKit's templates work, and it ports to Python cleanly as an abstract base class. (Update: we kept the IO interfaces for switching vendors but dropped the `ModuleIOSim` idea. Our robot code builds the real vendor objects in simulation too, and a physics model drives the vendor simulators through the HAL; see `sim/swerve_physics.py`.)
 
 **Gear ratio as a selectable preset.** Good code never hard-codes the ratio inside the module class. It has a table of SDS presets and a per-robot choice, and every conversion factor is derived from that choice.
 

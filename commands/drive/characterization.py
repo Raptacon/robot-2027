@@ -43,22 +43,15 @@ Where the results go:
     Log every change in doc/swerve/calibration-log.md.
 
 Example:
-    These tests are for the real robot; ``robot.py`` registers them on the
-    real drivetrain. This example uses the simulated drivetrain only so it
-    can run in CI without hardware.
+    ``bind_test_controls`` in ``commands/drive/bindings.py`` does this on the
+    robot and in the simulator (tests/drivetrain/test_characterization.py
+    runs every test on the simulated robot):
 
-    >>> import commands2
-    >>> from config.robots.swerve_test_bot import CONFIG
-    >>> from commands.drive.characterization import register_swerve
-    >>> from subsystem.drivetrain.drivetrain_sim import DrivetrainSim
-    >>> from utils.sysid.chooser import CharacterizationChooser
-    >>> sim = DrivetrainSim(CONFIG)
-    >>> chooser = CharacterizationChooser("Do nothing", commands2.InstantCommand())
-    >>> tests = register_swerve(chooser, sim.drivetrain)
-    >>> sorted(tests)
-    ['drive', 'driveSlowRamp', 'steer']
-    >>> "Wheel radius" in chooser.names
-    True
+    .. code-block:: python
+
+        chooser = CharacterizationChooser("Module check", ModuleCheck(drivetrain))
+        tests = register_swerve(chooser, drivetrain)
+        sorted(tests)  # ['drive', 'driveSlowRamp', 'steer']
 """
 
 import dataclasses

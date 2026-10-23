@@ -14,13 +14,21 @@ Why do we need an absolute encoder?
     disagree.
 
 Example:
+    With the CANcoder implementation (needs the CAN device or the
+    simulator, so not run here):
+
+    .. code-block:: python
+
+        encoder = AbsoluteEncoderIOCANcoder(CONFIG, CONFIG.corners[0])
+        inputs = AbsoluteEncoderInputs()
+        encoder.update_inputs(inputs)
+        inputs.connected, inputs.angle_rad
+
+    Until ``update_inputs`` hears from the encoder, it counts as not connected:
+
     >>> from subsystem.drivetrain.io.abs_encoder_io import AbsoluteEncoderInputs
-    >>> from subsystem.drivetrain.io.abs_encoder_sim import AbsoluteEncoderIOSim
-    >>> encoder = AbsoluteEncoderIOSim(true_angle_rad=lambda: 1.0, offset_rot=0.0)
-    >>> inputs = AbsoluteEncoderInputs()
-    >>> encoder.update_inputs(inputs)
-    >>> inputs.connected, round(inputs.angle_rad, 6)
-    (True, 1.0)
+    >>> AbsoluteEncoderInputs().connected
+    False
 """
 
 from abc import ABC, abstractmethod

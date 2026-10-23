@@ -19,24 +19,20 @@ The buttons are connected in :mod:`commands.drive.bindings`. This class only
 needs functions that return the stick values, so tests can drive it
 without a controller.
 
-Example (in simulation, no controller):
-    >>> from config.robots.swerve_test_bot import CONFIG
-    >>> from commands.drive.teleop_drive import TeleopDrive
-    >>> from subsystem.drivetrain.drivetrain_sim import DrivetrainSim
-    >>> sim = DrivetrainSim(CONFIG)
-    >>> teleop = TeleopDrive(
-    ...     sim.drivetrain,
-    ...     forward=lambda: 1.0,  # stick fully forward
-    ...     left=lambda: 0.0,
-    ...     rotate=lambda: 0.0,
-    ...     is_red=lambda: False,
-    ... )
-    >>> teleop.initialize()
-    >>> for _ in range(50):  # one second
-    ...     sim.drivetrain.periodic()
-    ...     teleop.execute()
-    >>> sim.drivetrain.pose.X() > 1.5  # moving away from the blue wall
-    True
+Example:
+    Without a controller, from plain functions (tests/drivetrain/test_teleop.py
+    runs this on the simulated robot):
+
+    .. code-block:: python
+
+        teleop = TeleopDrive(
+            drivetrain,
+            forward=lambda: 1.0,  # stick fully forward
+            left=lambda: 0.0,
+            rotate=lambda: 0.0,
+            is_red=lambda: False,
+        )
+        drivetrain.setDefaultCommand(teleop)  # the robot now drives away from the blue wall
 """
 
 import math

@@ -19,10 +19,10 @@ import time
 
 import pytest
 import rev
+from wpilib.simulation import stepTiming
 
 from commands.drive.module_check import HOLD_S, STEPS_DEG, ModuleCheck
 from config.robots.swerve_test_bot import CONFIG
-from subsystem.drivetrain.drivetrain_sim import DrivetrainSim
 from subsystem.drivetrain.io.abs_encoder_io import AbsoluteEncoderInputs
 from subsystem.drivetrain.io.gyro_io import GyroInputs
 from subsystem.drivetrain.io.gyro_io_onboard import YawUnwrapper
@@ -129,30 +129,39 @@ class TestCANcoder:
         assert -math.pi <= inputs.angle_rad < math.pi
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def navx_gyro():
+    pytest.importorskip("phoenix6")  # sim_harness needs it
     pytest.importorskip("navx")
+    from sim_harness import shared_gyro
     from wpilib.simulation import SimDeviceSim
 
-    from subsystem.drivetrain.io.gyro_io_navx import GyroIONavX
+    # Only one NavX can exist per test run; the drivetrain tests share this one.
+    return shared_gyro(CONFIG), SimDeviceSim("navX-Sensor[4]")
 
-    gyro = GyroIONavX(CONFIG)
-    return gyro, SimDeviceSim("navX-Sensor[4]")
+
+def read_navx(gyro, device, yaw_deg):
+    """Set the NavX simulator's yaw and wait for the NavX library to report it."""
+    device.getBoolean("Connected").set(True)
+    device.getDouble("Yaw").set(yaw_deg)
+    inputs = GyroInputs()
+    for _ in range(50):
+        stepTiming(0.02)  # the NavX library reads its simulator as time moves on
+        time.sleep(0.01)
+        gyro.update_inputs(inputs)
+        if inputs.connected and gyro.ahrs.getYaw() == pytest.approx(yaw_deg, abs=0.01):
+            break
+    return inputs
 
 
 class TestNavX:
     def test_clockwise_navx_reads_counterclockwise_positive(self, navx_gyro):
         gyro, device = navx_gyro
-        device.getBoolean("Connected").set(True)
-        device.getDouble("Yaw").set(-90.0)  # NavX: 90 degrees counterclockwise
-        inputs = GyroInputs()
-        for _ in range(50):
-            gyro.update_inputs(inputs)
-            if inputs.connected and abs(inputs.yaw_rad) > 0.1:
-                break
-            time.sleep(0.01)
-        assert inputs.connected
-        assert inputs.yaw_rad == pytest.approx(math.pi / 2)
+        # The NavX is shared with other tests, so check the change, not the total.
+        start = read_navx(gyro, device, 0.0).yaw_rad
+        turned = read_navx(gyro, device, -90.0)  # NavX: 90 degrees counterclockwise
+        assert turned.connected
+        assert turned.yaw_rad - start == pytest.approx(math.pi / 2, abs=1e-4)
 
 
 class TestYawUnwrapper:
@@ -171,34 +180,26 @@ class TestYawUnwrapper:
 
 
 class TestModuleCheck:
-    def test_cycles_through_each_direction(self):
-        check = ModuleCheck(DrivetrainSim(CONFIG).drivetrain)
+    def test_cycles_through_each_direction(self, sim_drive):
+        check = ModuleCheck(sim_drive().drivetrain)
         seen = [check.target_degrees(HOLD_S * i + 0.1) for i in range(len(STEPS_DEG) + 1)]
         assert seen == [*STEPS_DEG, STEPS_DEG[0]]
 
-    def test_wheels_point_exactly_where_asked(self):
+    def test_wheels_point_exactly_where_asked(self, sim_drive):
         # From 180 back to 0 the short way would leave the wheels at 180
         # rolling backward; the check must really turn them round.
-        sim = DrivetrainSim(CONFIG)
-        drive = sim.drivetrain
+        sim = sim_drive()
         for degrees in (180.0, 0.0):
             for _ in range(40):
-                drive.periodic()
-                for module in drive.modules:
+                sim.loop()
+                for module in sim.drivetrain.modules:
                     module.set_angle(math.radians(degrees), short_way=False)
-            for io in sim.module_sims:
-                error = math.remainder(io.true_steer_angle_rad - math.radians(degrees), math.tau)
-                assert abs(error) < math.radians(1)
+            for angle in sim.true_angles():
+                assert abs(math.remainder(angle - math.radians(degrees), math.tau)) < math.radians(1)
 
 
-def test_build_drivetrain_makes_every_device():
-    pytest.importorskip("phoenix6")
-    from subsystem.drivetrain.drivetrain_hardware import build_drivetrain
-
-    from subsystem.drivetrain.io.gyro_io_sim import GyroIOSim
-
-    # A second NavX in one test process upsets the NavX simulator, so the gyro
-    # is simulated here; the NavX has its own test above.
-    drive = build_drivetrain(CONFIG, gyro=GyroIOSim())
+def test_build_drivetrain_makes_every_device(sim_drive):
+    drive = sim_drive().drivetrain  # build_drivetrain with the config's CAN IDs
     assert len(drive.modules) == 4
     assert all(module.io.configured for module in drive.modules)  # pyright: ignore[reportAttributeAccessIssue]
+    assert all(module.encoder.configured for module in drive.modules)  # pyright: ignore[reportAttributeAccessIssue]

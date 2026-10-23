@@ -57,7 +57,7 @@ def test_left_stick_forward_drives_away_from_the_driver(control, robot, red):
         step(1.0)
         moved = robot.drivetrain.pose.X() - start_x
         assert (moved < -1.0) if red else (moved > 1.0)
-        assert robot.drive_sim.true_pose.x_m > 1.0  # toward the robot's own front
+        assert robot.sim_physics.true_pose.x_m > 1.0  # toward the robot's own front
 
         stick.setLeftY(0.0)
         stick.setLeftX(-1.0)  # stick pushed left reads -1

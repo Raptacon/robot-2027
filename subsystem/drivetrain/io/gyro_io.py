@@ -13,14 +13,21 @@ Which gyro?
     implementation file and changing the robot config.
 
 Example:
+    ``build_gyro`` picks the right one for the controller (needs the
+    hardware or the simulator, so not run here):
+
+    .. code-block:: python
+
+        gyro = build_gyro(CONFIG)
+        inputs = GyroInputs()
+        gyro.update_inputs(inputs)
+        inputs.yaw_rad  # radians, counterclockwise-positive, keeps counting past a full turn
+
+    Until ``update_inputs`` hears from the gyro, it counts as not connected:
+
     >>> from subsystem.drivetrain.io.gyro_io import GyroInputs
-    >>> from subsystem.drivetrain.io.gyro_io_sim import GyroIOSim
-    >>> gyro = GyroIOSim()
-    >>> gyro.step(yaw_rate_rad_per_s=1.0, dt_s=0.5)  # spin at 1 rad/s for half a second
-    >>> inputs = GyroInputs()
-    >>> gyro.update_inputs(inputs)
-    >>> inputs.yaw_rad
-    0.5
+    >>> GyroInputs().connected
+    False
 """
 
 from abc import ABC, abstractmethod

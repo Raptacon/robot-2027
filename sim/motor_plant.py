@@ -1,5 +1,9 @@
 """
-A simple simulated motor, written in plain Python.
+A motor's physics, for the simulator: how fast it spins for the volts it gets.
+
+Robot code never uses this. The physics model (:mod:`sim.swerve_physics`)
+reads the volts each SPARK MAX is applying in simulation, steps one of these
+plants, and gives the result back to the SPARK MAX's simulator.
 
 How it works
     A DC motor's speed follows the same equation SysId measures:
@@ -12,14 +16,14 @@ How it works
     speed and position over time.
 
     We use our own model instead of WPILib's ``DCMotorSim`` because the same
-    numbers come straight out of a SysId run (milestone M6), and because this
-    file doesn't change when WPILib's API changes between seasons.
+    numbers come straight out of a SysId run, and because this file doesn't
+    change when WPILib's API changes between seasons.
 
 Example:
     A motor that needs 0.1 V per rotation/s, and 0.01 V per rotation/s^2:
 
-    >>> from subsystem.drivetrain.io.sim_motor import SimMotor
-    >>> motor = SimMotor(kv=0.1, ka=0.01)
+    >>> from sim.motor_plant import MotorPlant
+    >>> motor = MotorPlant(kv=0.1, ka=0.01)
     >>> for _ in range(1000):  # 1 second in 1 ms steps
     ...     motor.step(volts=6.0, dt_s=0.001)
     >>> round(motor.velocity, 1)  # top speed is 6 V / 0.1 = 60 rotations/s
@@ -33,8 +37,8 @@ NEO_STALL_CURRENT_AMPS = 105.0
 NOMINAL_VOLTS = 12.0
 
 
-class SimMotor:
-    """One simulated motor shaft, in rotations and rotations per second.
+class MotorPlant:
+    """One motor shaft's physics, in rotations and rotations per second.
 
     Args:
         kv: Volts per (rotation per second) to hold a steady speed.
