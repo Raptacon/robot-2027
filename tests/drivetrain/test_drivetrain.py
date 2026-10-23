@@ -18,6 +18,7 @@ those checks are in test_module.py, on the module alone.
 import doctest
 import importlib
 import math
+import time
 
 import pytest
 
@@ -133,12 +134,13 @@ class TestHeading:
         spin = ChassisSpeeds(0, 0, 1.0)
         sim.run(1.0, spin)
         sim.physics.gyro_connected = False  # gyro unplugged mid-match
-        # The NavX library takes a moment (about 0.3 s) to notice; the heading
-        # is frozen until then, like on the real robot.
-        for _ in range(50):
+        # The NavX library takes a moment (about 0.3 s of real time) to
+        # notice; the heading is frozen until then, like on the real robot.
+        # Run loops at real-time pace so its clock gets there.
+        deadline = time.monotonic() + 3.0
+        while sim.drivetrain.gyro_inputs.connected and time.monotonic() < deadline:
             sim.run(0.02, spin)
-            if not sim.drivetrain.gyro_inputs.connected:
-                break
+            time.sleep(0.02)
         assert not sim.drivetrain.gyro_inputs.connected
         error_when_noticed = sim.drivetrain.heading_rad - sim.true_pose.heading_rad
         sim.run(1.0, spin)  # now the wheels keep the heading going
