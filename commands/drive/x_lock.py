@@ -6,19 +6,12 @@ button is held, then the drivetrain's default command (teleop) takes over
 again.
 
 Example:
-    >>> from config.robots.swerve_test_bot import CONFIG
-    >>> from commands.drive.x_lock import XLock
-    >>> from subsystem.drivetrain.drivetrain_sim import DrivetrainSim
-    >>> sim = DrivetrainSim(CONFIG)
-    >>> lock = XLock(sim.drivetrain)
-    >>> for _ in range(25):
-    ...     sim.drivetrain.periodic()
-    ...     lock.execute()
-    >>> import math
-    >>> front_left = CONFIG.corners[0]
-    >>> toward_center = math.atan2(front_left.y_m, front_left.x_m)  # 47 degrees on this robot
-    >>> abs(sim.drivetrain.modules[0].angle_rad - toward_center) < math.radians(1)
-    True
+    Bound to a button in ``commands/drive/bindings.py`` (tests/drivetrain/test_teleop.py
+    runs it on the simulated robot):
+
+    .. code-block:: python
+
+        factory.getButton("drivetrain.x_lock").whileTrue(XLock(drivetrain))
 """
 
 import commands2

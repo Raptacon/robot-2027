@@ -1,8 +1,9 @@
 """
 Build the real drivetrain from the robot config: SPARK MAX modules, CANcoders and the gyro.
 
-``robot.py`` calls :func:`build_drivetrain` on the robot. In simulation it
-uses :class:`~subsystem.drivetrain.drivetrain_sim.DrivetrainSim` instead.
+``robot.py`` calls :func:`build_drivetrain` on the robot and in the
+simulator alike. In the simulator the vendor libraries simulate each device
+and ``physics.py`` moves them.
 
 Which gyro?
     On SystemCore, the built-in IMU (:mod:`subsystem.drivetrain.io.gyro_io_onboard`).
@@ -53,7 +54,7 @@ def build_drivetrain(config: RobotConfig, loop_period_s: float = 0.02, gyro: Gyr
         config: The robot config (CAN IDs, offsets, gearing, SPARK settings).
         loop_period_s: The robot loop period in seconds.
         gyro: The gyro to use, or ``None`` for this controller's usual one
-            (see :func:`build_gyro`). Tests pass a simulated gyro.
+            (see :func:`build_gyro`).
 
     Returns:
         The drivetrain subsystem, with one module per corner.

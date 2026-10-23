@@ -14,17 +14,18 @@ How do I drive it?
     desaturating (see :mod:`subsystem.drivetrain.swerve_math`), and sends
     each module its target.
 
-Example (in simulation):
-    >>> from config.robots.swerve_test_bot import CONFIG
-    >>> from subsystem.drivetrain.drivetrain_sim import DrivetrainSim
-    >>> from subsystem.drivetrain.swerve_math import ChassisSpeeds
-    >>> sim = DrivetrainSim(CONFIG)
-    >>> drive = sim.drivetrain
-    >>> for _ in range(50):  # one second of 20 ms loops
-    ...     drive.periodic()
-    ...     drive.drive(ChassisSpeeds(vx_mps=1.0), field_relative=True)
-    >>> 0.8 < drive.pose.X() < 1.0  # about 1 m forward (it had to speed up first)
-    True
+Example:
+    In ``robot.py`` (needs the CAN devices or the simulator, so not run
+    here; tests/drivetrain/test_drivetrain.py drives it in the simulator):
+
+    .. code-block:: python
+
+        from subsystem.drivetrain.drivetrain_hardware import build_drivetrain
+        from subsystem.drivetrain.swerve_math import ChassisSpeeds
+
+        drive = build_drivetrain(CONFIG)
+        # In a command's execute(), every loop:
+        drive.drive(ChassisSpeeds(vx_mps=1.0), field_relative=True)
 """
 
 from collections.abc import Sequence
@@ -63,8 +64,8 @@ from utils.wpimath_compat import (
 
 
 class Drivetrain(commands2.Subsystem):
-    """The swerve drive. Build it with real IO (milestone M5) or with
-    :class:`~subsystem.drivetrain.drivetrain_sim.DrivetrainSim`.
+    """The swerve drive. Build it with
+    :func:`~subsystem.drivetrain.drivetrain_hardware.build_drivetrain`.
 
     Args:
         config: The robot config.
@@ -125,8 +126,6 @@ class Drivetrain(commands2.Subsystem):
         disabled = wpilib.RobotState.isDisabled()
         for module in self.modules:
             module.periodic(disabled)
-        # Read the gyro after the modules. On the robot the order doesn't
-        # matter; in simulation it lets the gyro see this loop's wheel motion.
         self.gyro.update_inputs(self.gyro_inputs)
         self._gyro_log.publish(self.gyro_inputs)
 

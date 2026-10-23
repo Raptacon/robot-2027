@@ -5,7 +5,9 @@ What is an "IO layer"?
     The drive code needs to read sensors and command motors, but it shouldn't
     care which brand of motor controller or encoder is on the robot. So each
     kind of device gets an *interface*: a class that lists what you can ask the
-    device to do, without saying how.
+    device to do, without saying how. Switching to a different motor
+    controller, encoder or gyro means writing one new implementation file;
+    the module and drivetrain code don't change.
 
     - :class:`~subsystem.drivetrain.io.module_io.ModuleIO`: a module's drive and
       steer motors.
@@ -14,10 +16,16 @@ What is an "IO layer"?
     - :class:`~subsystem.drivetrain.io.gyro_io.GyroIO`: the gyro that measures
       which way the robot is facing.
 
-    Each interface has implementations. The *sim* ones (files ending
-    ``_sim.py``) run on any computer and in CI. Real hardware ones (files ending
-    ``_spark.py``, ``_cancoder.py`` and so on) come in milestone M5. Vendor
-    libraries are only imported in those hardware files.
+    Each interface has one implementation per device we use, named after it:
+    ``module_io_spark.py`` (SPARK MAX + NEO), ``abs_encoder_cancoder.py``
+    (CANcoder), ``gyro_io_navx.py`` and ``gyro_io_onboard.py``. Vendor
+    libraries are only imported in those files.
+
+What about simulation?
+    There are no simulated implementations. In ``robotpy sim`` and in tests
+    the robot builds the same SPARK MAX, CANcoder and gyro objects as on the
+    robot; each vendor library simulates its own device, and the physics in
+    :mod:`sim.swerve_physics` moves them.
 
 Reading sensors: the "inputs" pattern
     Each interface has a matching *inputs* dataclass, like

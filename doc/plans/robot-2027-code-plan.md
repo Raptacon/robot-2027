@@ -118,17 +118,14 @@ subsystem/drivetrain/
   io/
     module_io.py         # ModuleIO interface + ModuleInputs dataclass (SI units)
     module_io_spark.py   # SparkMax + NEO drive and steer
-    module_io_sim.py     # DCMotorSim plants fitted from SysId values
     abs_encoder_io.py    # AbsoluteEncoderIO interface
     abs_encoder_cancoder.py
     gyro_io.py           # GyroIO interface
     gyro_io_navx.py      # NavX on a roboRIO
     gyro_io_onboard.py   # SystemCore built-in IMU
-    gyro_io_sim.py
   swerve_math.py         # pure-Python kinematics, discretize, desaturate, optimize (same on 2026 and 2027)
   module.py              # optimize, cosine scale, feedforward, seeding + health checks
   drivetrain.py          # kinematics, discretize, desaturate, odometry, pose estimator, PathPlanner, SysId
-  drivetrain_sim.py      # builds a sim drivetrain and tracks the true pose for tests
   drivetrain_hardware.py # builds the real drivetrain (SparkMax, CANcoder, gyro picked by controller)
   odometry_sampler.py    # swappable: once per loop now, thread later
 commands/drive/
@@ -146,9 +143,14 @@ utils/sysid/
   routines.py            # SysIdTests: the four tests as commands, wpilog logging, quick estimate
   fit.py                 # least-squares kS / kV / kA fit for the dashboard estimate and CI tests
   chooser.py             # the test-mode "Characterization" chooser
-physics.py               # thin: steps the sim IO and BatterySim
-tests/drivetrain/        # config sanity, kinematics, module, sim scenarios
+sim/
+  motor_plant.py         # one motor's kS/kV/kA physics (never used by robot code)
+  swerve_physics.py      # drives the REV, Phoenix and gyro sims through the HAL; true pose, battery
+physics.py               # thin: steps sim/swerve_physics.py for robotpy sim, draws the Field
+tests/drivetrain/        # config sanity, kinematics, module, scenarios on the physics (sim_harness.py)
 ```
+
+**Simulation design (revised during M6).** M2 to M4 first built simulated IO classes (`ModuleIOSim` and friends) that the robot code used in place of the real ones. That was replaced: the robot code now builds the real SPARK MAX, CANcoder and gyro objects everywhere, the vendor libraries simulate those devices through the HAL, and one physics model (`sim/swerve_physics.py`) moves them, for `robotpy sim` and the unit tests alike. The IO interfaces stay, as the way to switch motor controllers or sensors. Faults the vendor sims can't produce (a CANcoder that never answers or answers late, sensor latency) are covered on the module alone with recording fakes, not with a fake simulator.
 
 ## 6. Milestones
 

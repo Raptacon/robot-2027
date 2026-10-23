@@ -18,14 +18,13 @@ also check the bevel gears all face the same side
 (doc/swerve/tuning-and-calibration.md section 3).
 
 Example:
-    >>> from config.robots.swerve_test_bot import CONFIG
-    >>> from commands.drive.module_check import ModuleCheck
-    >>> from subsystem.drivetrain.drivetrain_sim import DrivetrainSim
-    >>> sim = DrivetrainSim(CONFIG)
-    >>> check = ModuleCheck(sim.drivetrain)
-    >>> check.initialize()
-    >>> check.target_degrees(elapsed_s=4.0)  # second step
-    90.0
+    The default ``Characterization`` choice in test mode (see
+    ``commands/drive/bindings.py``); to run it by hand:
+
+    .. code-block:: python
+
+        check = ModuleCheck(drivetrain)
+        check.schedule()  # 0, 90 and 180 degrees, then stops
 """
 
 import math

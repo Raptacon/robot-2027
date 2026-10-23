@@ -9,18 +9,22 @@ read back.
 Units are always SI: meters, meters per second, radians, volts, amps.
 
 Example:
-    Every loop, read the sensors once, then send commands:
+    Every loop, read the sensors once, then send commands. With the SPARK MAX
+    implementation (needs the CAN devices or the simulator, so not run here):
 
-    >>> from config.robots.swerve_test_bot import CONFIG
+    .. code-block:: python
+
+        io = ModuleIOSpark(CONFIG, CONFIG.corners[0])
+        inputs = ModuleInputs()
+        io.update_inputs(inputs)  # read every sensor into `inputs`
+        io.set_steer_angle(0.5)  # point the wheel 0.5 rad left of forward
+        io.set_drive_velocity(1.0)  # roll forward at 1 m/s
+
+    A new ``ModuleInputs`` starts at zero until ``update_inputs`` fills it:
+
     >>> from subsystem.drivetrain.io.module_io import ModuleInputs
-    >>> from subsystem.drivetrain.io.module_io_sim import ModuleIOSim
-    >>> io = ModuleIOSim(CONFIG)
-    >>> inputs = ModuleInputs()
-    >>> io.update_inputs(inputs)  # read every sensor into `inputs`
-    >>> inputs.drive_velocity_mps
+    >>> ModuleInputs().drive_velocity_mps
     0.0
-    >>> io.set_steer_angle(0.5)  # point the wheel 0.5 rad left of forward
-    >>> io.set_drive_velocity(1.0)  # roll forward at 1 m/s
 """
 
 from abc import ABC, abstractmethod
@@ -75,10 +79,10 @@ class ModuleIO(ABC):
     """What the drive code can ask of one module's drive and steer motors.
 
     This is an *abstract* class: it describes the methods but doesn't do
-    anything itself. Real hardware and the simulator each provide a class
-    that fills them in (for example :class:`~subsystem.drivetrain.io.module_io_sim.ModuleIOSim`).
-    Code that uses a module only ever talks to a ``ModuleIO``, so it works the
-    same on the robot and in simulation.
+    anything itself. Each kind of motor controller provides a class that
+    fills them in (:class:`~subsystem.drivetrain.io.module_io_spark.ModuleIOSpark`
+    for SPARK MAX + NEO). Code that uses a module only ever talks to a
+    ``ModuleIO``, so switching motor controllers means writing one new class.
     """
 
     @abstractmethod

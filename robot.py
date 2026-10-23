@@ -10,6 +10,7 @@ import wpilib
 from commands.drive.bindings import bind_driver_controls, bind_test_controls
 from config.loader import load_robot_config
 from subsystem.drivetrain.drivetrain import Drivetrain
+from subsystem.drivetrain.drivetrain_hardware import build_drivetrain
 from subsystem.health_and_status import HealthAndStatus
 from utils.datalog_bridge import setup_logging
 from utils.input import InputFactory
@@ -63,23 +64,17 @@ class MyRobot(commands2.TimedCommandRobot):
         self.characterization = bind_test_controls(self.inputs, self.drivetrain)
 
     def drivetrainInit(self) -> Drivetrain:
-        """Build the drivetrain: simulated in the simulator, real hardware on the robot.
+        """Build the drivetrain from the robot config's SPARK MAXes, CANcoders and gyro.
+
+        The same code runs in the simulator: there the vendor libraries
+        simulate the devices, and ``physics.py`` moves them.
 
         Returns:
-            The :class:`Drivetrain`. In simulation, ``self.drive_sim`` also
-            holds the :class:`DrivetrainSim` around it.
+            The :class:`Drivetrain`.
         """
-        loop_period_s = MyRobot.kDefaultPeriod / 1000
-        if self.isSimulation():
-            from subsystem.drivetrain.drivetrain_sim import DrivetrainSim
-
-            self.drive_sim = DrivetrainSim(self.robot_config, loop_period_s=loop_period_s)
-            return self.drive_sim.drivetrain
-
-        from subsystem.drivetrain.drivetrain_hardware import build_drivetrain
-
-        drivetrain = build_drivetrain(self.robot_config, loop_period_s=loop_period_s)
-        self.startRevLogging()
+        drivetrain = build_drivetrain(self.robot_config, loop_period_s=MyRobot.kDefaultPeriod / 1000)
+        if self.isReal():
+            self.startRevLogging()
         return drivetrain
 
     def telemInit(self) -> None:
