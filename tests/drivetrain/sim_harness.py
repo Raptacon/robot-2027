@@ -46,6 +46,9 @@ from subsystem.drivetrain.swerve_math import ChassisSpeeds  # noqa: E402
 
 LOOP_S = 0.02
 
+SENSOR_TIMEOUT_S = 2.0
+"""Real time to wait for the NavX and CANcoder simulators (they normally answer in 20 ms)."""
+
 _sparks: dict[int, rev.SparkMax] = {}
 _make_new_spark_max = module_io_spark.make_spark_max
 
@@ -127,7 +130,9 @@ class SimDrive:
         self.set_enabled(enabled)
         if isTimingPaused():
             stepTiming(LOOP_S)  # let the NavX library read the new heading
-        assert self.physics.wait_for_sensors(encoders=True), "simulated sensors never reported"
+        assert self.physics.wait_for_sensors(encoders=True, timeout_s=SENSOR_TIMEOUT_S), (
+            "simulated sensors never reported"
+        )
         self.loop()  # seed the modules
 
     def set_enabled(self, enabled: bool) -> None:
@@ -150,7 +155,11 @@ class SimDrive:
             stepTiming(LOOP_S)
         if wait_for_encoders is None:
             wait_for_encoders = wpilib.RobotState.isDisabled()
-        self.physics.wait_for_sensors(encoders=wait_for_encoders)
+        # A slow CI machine can take a while; failing here beats running the
+        # robot code on last loop's readings and failing somewhere confusing.
+        assert self.physics.wait_for_sensors(encoders=wait_for_encoders, timeout_s=SENSOR_TIMEOUT_S), (
+            "simulated gyro or CANcoders didn't report this loop's values in time"
+        )
         self.robot_loop()
 
     def run(self, seconds: float, speeds: ChassisSpeeds | None = None, field_relative: bool = True) -> None:
