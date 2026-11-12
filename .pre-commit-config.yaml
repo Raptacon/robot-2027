@@ -2,7 +2,7 @@
 # Run on everything by hand: `pre-commit run --all-files`
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.10
+    rev: v0.17.4
     hooks:
       - id: ruff-check
         args: [--fix]

@@ -18,7 +18,10 @@ make                    # Creates venv and installs dependencies (uses Makefile)
 python -m venv venv
 pip install -r requirements.txt
 python -m robotpy sync  # Installs pyproject.toml dependencies to robotpy cache
+make ROBOTPY=2027       # Separate venv with the RobotPy 2027 alpha (requirements-2027.txt, Python 3.15)
 ```
+
+**Two RobotPy lines:** main runs RobotPy 2026 on Python 3.14 (`requirements.txt`; 2026 has no 3.15 wheels). The 2027 alpha (SystemCore) runs on Python 3.15 from `requirements-2027.txt` and needs glibc 2.41+ on Linux (Debian 13 / `python:3.15-trixie`, not Ubuntu 24.04). Keep code working on both until the full move to 2027 (milestone M8). RobotPy 2027 alpha 8 renamed nearly every WPILib method to snake_case (`robotPeriodic` -> `robot_periodic`, `getAlliance` -> `get_alliance`), renamed test mode to utility mode, moved `Alert` to `wpiutil`, and dropped pyfrc (robot tests are in `wpilib.testing`, isolation is `[tool.robotpy.testing]`, and there is no `robotpy coverage` command). `robotpy-urcl` and `robotpy-pathplannerlib` have no 2027 builds yet.
 
 **Run simulator:**
 ```bash
@@ -105,7 +108,7 @@ Drivetrain modules start at CAN ID 50 with 3 consecutive IDs per module (drive, 
 
 ## Key Libraries
 
-- `robotpy` 2026.x - WPILib Python bindings (2027 / SystemCore move tracked by the preview CI job)
+- `robotpy` 2026.x on Python 3.14 - WPILib Python bindings (2027.0.0a8 on Python 3.15 for SystemCore, tracked by the preview CI job)
 - `robotpy-rev` - REV SparkMax motor controllers
 - `phoenix6` - CTRE CANcoder absolute encoders
 - `robotpy-navx` - NavX gyroscope
@@ -117,8 +120,8 @@ Drivetrain modules start at CAN ID 50 with 3 consecutive IDs per module (drive, 
 ## CI Pipeline
 
 GitHub Actions (`.github/workflows/robot_ci.yml`):
-- Unit tests on Linux (with coverage report artifact and sim smoke test), Windows and macOS: `python -m robotpy coverage test`
-- RobotPy 2027 preview job (informational: stays green, reports breakage as a warning and in the job summary)
+- Unit tests (RobotPy 2026, Python 3.14) on Linux (with coverage report artifact and sim smoke test), Windows and macOS: `python -m robotpy coverage test`
+- RobotPy 2027 preview job on Python 3.15 in a `python:3.15-trixie` container, installing `requirements-2027.txt` (informational: stays green, reports breakage as a warning and in the job summary)
 - Lint and format: `ruff check .` and `ruff format --check .`, rules from `pyproject.toml` (same as `make lint` and pre-commit; blocking)
 - Type check: pyright, informational (stays green, reports the error count as a warning)
 - pip caching on every job, and a new push cancels the superseded run
