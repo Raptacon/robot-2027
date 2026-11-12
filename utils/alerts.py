@@ -16,18 +16,25 @@ Example:
 
 import wpilib
 
-_levels = getattr(wpilib.Alert, "Level", None)
+try:  # RobotPy 2026 (and 2027 before alpha 8)
+    from wpilib import Alert
+except ImportError:  # RobotPy 2027 alpha 8 and later moved Alert to wpiutil
+    from wpiutil import Alert
+
+_levels = getattr(Alert, "Level", None)
 if _levels is not None:  # RobotPy 2027
     _ERROR, _WARNING = _levels.HIGH, _levels.MEDIUM
 else:  # RobotPy 2026
-    _ERROR, _WARNING = wpilib.Alert.AlertType.kError, wpilib.Alert.AlertType.kWarning
+    _ERROR, _WARNING = Alert.AlertType.kError, Alert.AlertType.kWarning
+
+__all__ = ["Alert", "error_alert", "warning_alert"]
 
 
-def error_alert(text: str) -> wpilib.Alert:
+def error_alert(text: str) -> Alert:
     """An alert for something that stops part of the robot from working."""
-    return wpilib.Alert(text, _ERROR)
+    return Alert(text, _ERROR)
 
 
-def warning_alert(text: str) -> wpilib.Alert:
+def warning_alert(text: str) -> Alert:
     """An alert for something that still works but needs a look."""
-    return wpilib.Alert(text, _WARNING)
+    return Alert(text, _WARNING)
