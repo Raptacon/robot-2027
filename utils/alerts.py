@@ -14,8 +14,6 @@ Example:
     >>> alert.set(False)  # hides it again
 """
 
-import wpilib
-
 try:  # RobotPy 2026 (and 2027 before alpha 8)
     from wpilib import Alert
 except ImportError:  # RobotPy 2027 alpha 8 and later moved Alert to wpiutil

@@ -1,0 +1,33 @@
+# RobotPy 2027 alpha (SystemCore) on Python 3.12-3.15. Used by the
+# "RobotPy 2027 preview" CI job; install with:
+#   pip install --pre -r requirements-2027.txt
+# Linux needs glibc 2.41+ (Debian 13 / Ubuntu 25.04 or newer) for the
+# 2027 native wheels; Ubuntu 24.04 cannot install them.
+#
+# Not yet released for 2027 (left out until they are):
+#   robotpy-urcl, robotpy-pathplannerlib
+# pyfrc is gone in 2027: `robotpy test` and the robot tests are built into wpilib.
+
+#Common Python Libs
+pyyaml
+numpy
+
+#Package, testing tools
+ruff==0.17.4
+pyright
+pre-commit
+coverage
+wheel
+pdoc
+
+#FRC-specific packages
+robotpy[all]==2027.0.0a8
+robotpy-rev==2027.*
+robotpy-navx==2027.*
+photonlibpy==2027.*
+# CTRE's SystemCore pre-releases are numbered 26.5x/26.7x, not 2027
+phoenix6>=26.50.0a1,<27
+
+#macOS sim controller support (GLFW cannot read Xbox/PS controllers on macOS)
+pysdl2; sys_platform == "darwin"
+pysdl2-dll; sys_platform == "darwin"

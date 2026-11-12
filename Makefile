@@ -16,6 +16,20 @@ PYTHON=python3
 VENVBIN=./${VENV}/bin
 endif
 
+# RobotPy line to install: `make sim` uses 2026 (requirements.txt),
+# `make sim ROBOTPY=2027` uses the 2027 alpha (requirements-2027.txt, Python 3.15)
+# in its own venv so the two never mix.
+ROBOTPY ?= 2026
+ifeq ($(ROBOTPY), 2027)
+VENV:=${VENV}_2027
+VENVBIN:=./${VENV}/$(notdir ${VENVBIN})
+REQUIREMENTS=requirements-2027.txt
+PIP_PRE=--pre
+else
+REQUIREMENTS=requirements.txt
+PIP_PRE=
+endif
+
 default: help 
 # https://marmelab.com/blog/2016/02/29/auto-documented-makefile.html
 help: ## This list of Makefile targets
@@ -49,7 +63,7 @@ coverage: setup_${VENV} test
 
 setup_${VENV}: ${VENV}
 	${VENVBIN}/${PYTHON} -m pip install --upgrade pip setuptools
-	${VENVBIN}/pip install --pre -r ${CWD}/requirements.txt
+	${VENVBIN}/pip install ${PIP_PRE} -r ${CWD}/${REQUIREMENTS}
 	$(file > setup_${VENV})
 
 clean:

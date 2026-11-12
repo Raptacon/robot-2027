@@ -1,6 +1,12 @@
 #
 # Use this configuration file to control what RobotPy packages are installed
-# on your RoboRIO
+# on the robot controller (roboRIO on 2026, SystemCore on 2027)
+#
+# We support two RobotPy lines while 2027 is in alpha:
+#   - 2026 (main): Python 3.14, requirements.txt, robotpy_version below
+#   - 2027 alpha (preview): Python 3.15, requirements-2027.txt
+# Deploying to SystemCore needs robotpy_version set to a 2027 release; switch
+# it with `python -m robotpy project update-robotpy` once we move fully to 2027.
 #
 
 [tool.robotpy]
@@ -37,7 +43,12 @@ requires = [
     "robotpy-urcl",
 ]
 
+# Run each robot test in its own process. RobotPy 2026 reads this from pyfrc;
+# RobotPy 2027 dropped pyfrc and reads [tool.robotpy.testing] below.
 pyfrc.isolated = true
+
+[tool.robotpy.testing]
+isolated = true
 
 [tool.pytest.ini_options]
 # Exclude example directories from main test collection to avoid
@@ -51,7 +62,8 @@ addopts = "-m 'not graph'"
 
 [tool.ruff]
 line-length = 120
-target-version = "py311"
+# Oldest Python either supported RobotPy line runs on (2027 needs 3.12+)
+target-version = "py312"
 extend-exclude = ["docs"]
 
 [tool.ruff.lint]
@@ -70,6 +82,6 @@ ignore = ["E731"]
 [tool.pyright]
 include = ["robot.py", "commands", "config", "subsystem", "utils", "tests"]
 exclude = ["**/__pycache__", "docs", "examples"]
-pythonVersion = "3.11"
+pythonVersion = "3.12"
 typeCheckingMode = "basic"
 reportMissingModuleSource = false

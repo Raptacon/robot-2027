@@ -60,7 +60,7 @@ How it detects crashes:
     - robot.py's callAndCatch method re-raises exceptions in sim mode,
       so any crash in teleopPeriodic/robotPeriodic becomes a test failure.
     - pyfrc's reraise fixture catches exceptions from the robot thread.
-    - pyfrc.isolated = true (in pyproject.toml) runs each test in its own
+    - isolated testing (in pyproject.toml) runs each test in its own
       process so tests can't interfere with each other.
 """
 

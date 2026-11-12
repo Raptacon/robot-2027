@@ -2,14 +2,14 @@
 pyyaml
 
 #Package, testing tools
-ruff==0.16.10
+ruff==0.17.4
 pyright
 pre-commit
 coverage
 wheel
 pdoc
 
-#FRC-specific packages
+#FRC-specific packages (RobotPy 2026, Python 3.10-3.14; the 2027 alpha is in requirements-2027.txt)
 robotpy[all]==2026.*
 robotpy-rev==2026.*
 robotpy-navx==2026.*
