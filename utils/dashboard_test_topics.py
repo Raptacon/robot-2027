@@ -6,6 +6,12 @@ dashboard (raptaboard, Elastic, AdvantageScope) has something to decode:
 - ``OrbitPose`` (Pose2d): circles the field center once every ~6 s, facing
   along its path.
 - ``OrbitPose3d`` (Pose3d): the same circle, bobbing up and down.
+- ``OrbitHeading`` (Rotation2d): ``OrbitPose``'s heading, for a gyro dial
+  (counterclockwise, as WPILib counts).
+- ``Gyro`` (a table with ``.type`` "Gyro" and ``Value``, as a Sendable
+  gyro publishes): the same heading in degrees counted clockwise, as most
+  gyros' ``getAngle`` counts, so a dashboard set to read it clockwise
+  shows the same as ``OrbitHeading``.
 - ``Fleet`` (Pose2d[]): three robots spaced evenly round the circle.
 - ``OrbitPath`` (Pose2d[]): the orbit's circle, as a trajectory to draw.
 - ``Fuel`` (Translation2d[]): balls lying on the field, a ring of them
@@ -156,6 +162,11 @@ class DashboardTestTopics:
 
         self.orbit = inst.getStructTopic(PREFIX + "OrbitPose", Pose2d).publish()
         self.orbit3d = inst.getStructTopic(PREFIX + "OrbitPose3d", Pose3d).publish()
+        self.orbit_heading = inst.getStructTopic(PREFIX + "OrbitHeading", Rotation2d).publish()
+        gyro = inst.getTable(PREFIX + "Gyro")
+        self.gyro_type = gyro.getStringTopic(".type").publish()
+        self.gyro_type.set("Gyro")
+        self.gyro_value = gyro.getDoubleTopic("Value").publish()
         self.fleet = inst.getStructArrayTopic(PREFIX + "Fleet", Pose2d).publish()
         self.orbit_path = inst.getStructArrayTopic(PREFIX + "OrbitPath", Pose2d).publish()
         self.orbit_path.set(
@@ -269,6 +280,8 @@ class DashboardTestTopics:
                 Rotation3d(0.0, 0.0, p.rotation().radians()),
             )
         )
+        self.orbit_heading.set(p.rotation())
+        self.gyro_value.set(-p.rotation().degrees())
         self.fleet.set([self._orbit_pose(angle + i * 2 * math.pi / 3) for i in range(3)])
         self.seen_tags.set(self._seen_tags(p))
         self.seen_fuel.set(self._seen_fuel(p))
