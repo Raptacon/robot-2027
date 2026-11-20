@@ -18,6 +18,8 @@ dashboard (raptaboard, Elastic, AdvantageScope) has something to decode:
   the robot only while it's out.
 - ``IntakeExtensionIn`` (double): how far the intake reaches, 0 to 12
   inches and back while it's out (inches, so a dashboard scales it).
+- Reads ``/raptaboard/target`` (Pose2d) and ``/raptaboard/target_set``,
+  the target a raptaboard Field sets with a click, and logs each new one.
 - ``SeenTags`` (int[]): the 2026 field's AprilTags that Robot-2026's two
   cameras would see from ``OrbitPose``: in a camera's 70 degree FOV, within
   6 m, and facing it within 60 degrees (the camera visualizer's rules, in
@@ -171,6 +173,9 @@ class DashboardTestTopics:
         self.fuel.set(self.fuel_spots)
         self.seen_fuel = inst.getStructArrayTopic(PREFIX + "SeenFuel", Translation2d).publish()
         self.intake_deployed = inst.getBooleanTopic(PREFIX + "IntakeDeployed").publish()
+        self.target_sub = inst.getStructTopic("/raptaboard/target", Pose2d).subscribe(Pose2d())
+        self.target_set_sub = inst.getBooleanTopic("/raptaboard/target_set").subscribe(False)
+        self._last_target = None
         self.intake_extension = inst.getDoubleTopic(PREFIX + "IntakeExtensionIn").publish()
         self.tags = self._load_tags()
         self.modules = inst.getStructArrayTopic(PREFIX + "ModuleStates", SwerveModuleVelocity).publish()
@@ -267,6 +272,7 @@ class DashboardTestTopics:
         self.fleet.set([self._orbit_pose(angle + i * 2 * math.pi / 3) for i in range(3)])
         self.seen_tags.set(self._seen_tags(p))
         self.seen_fuel.set(self._seen_fuel(p))
+        self._log_target()
         into = now_s % INTAKE_CYCLE_S
         out = into < INTAKE_OUT_S
         self.intake_deployed.set(out)
@@ -307,6 +313,17 @@ class DashboardTestTopics:
             (t.ID, t.pose.X(), t.pose.Y(), t.pose.rotation().Z())
             for t in layout.getTags()
         ]
+
+    def _log_target(self) -> None:
+        """Log the dashboard's target when it's set, moved or cleared."""
+        target = self.target_sub.get() if self.target_set_sub.get() else None
+        key = None if target is None else (round(target.X(), 2), round(target.Y(), 2), round(target.rotation().degrees()))
+        if key != self._last_target:
+            if key is None:
+                logging.info("DashTest target cleared")
+            else:
+                logging.info("DashTest target: x %.2f m, y %.2f m, facing %d deg", *key)
+            self._last_target = key
 
     def _seen_fuel(self, robot: Pose2d) -> list[Translation2d]:
         """The balls in view ahead of ``robot``, relative to it."""
