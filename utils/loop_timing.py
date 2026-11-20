@@ -108,7 +108,7 @@ class LoopTimer:
         self._channel_pubs: dict[str, dict[str, ntcore.DoublePublisher]] = {}
         self._total_ms_pub = self._table.getDoubleTopic("totalMs").publish()
         self._total_pct_pub = self._table.getDoubleTopic("totalBudgetPct").publish()
-        self._alert_info = wpilib.Alert("Frame Timing", wpilib.Alert.AlertType.kInfo)
+        # No info alert: the budget use is in /FrameTiming/totalBudgetPct.
         self._alert_warning = wpilib.Alert("Frame Timing", wpilib.Alert.AlertType.kWarning)
         self._alert_error = wpilib.Alert("Frame Timing", wpilib.Alert.AlertType.kError)
 
@@ -142,21 +142,20 @@ class LoopTimer:
             self._last_publish = now
             self._publish_nt(total_ms, total_pct)
 
-        # Alert based on budget usage
+        # Alert based on budget usage. The text names the budget use in 10%
+        # steps, so it only changes (and is only sent again) when the step
+        # does, not every loop.
         overrun = total_pct >= 100.0
         warning = total_pct >= 80.0 and not overrun
-        info = not warning and not overrun
+        step = int(total_pct // 10 * 10)
 
         self._alert_error.set(overrun)
         self._alert_warning.set(warning)
-        self._alert_info.set(info)
 
         if overrun:
-            self._alert_error.setText(f"Frame Timing: OVERRUN {total_pct:.0f}% ({total_ms:.1f}ms)")
+            self._alert_error.setText(f"Frame Timing: OVERRUN, {step}%+ of the loop")
         elif warning:
-            self._alert_warning.setText(f"Frame Timing: {total_pct:.0f}% - possible overrun")
-        else:
-            self._alert_info.setText(f"Frame Timing: {total_pct:.0f}%")
+            self._alert_warning.setText(f"Frame Timing: {step}%+ of the loop - possible overrun")
 
     def _publish_nt(self, total_ms: float, total_pct: float):
         for name, stats in self._channels.items():

@@ -18,9 +18,13 @@ import wpilib
 
 _levels = getattr(wpilib.Alert, "Level", None)
 if _levels is not None:  # RobotPy 2027
-    _ERROR, _WARNING = _levels.HIGH, _levels.MEDIUM
+    _ERROR, _WARNING, _INFO = _levels.HIGH, _levels.MEDIUM, _levels.LOW
 else:  # RobotPy 2026
-    _ERROR, _WARNING = wpilib.Alert.AlertType.kError, wpilib.Alert.AlertType.kWarning
+    _ERROR, _WARNING, _INFO = (
+        wpilib.Alert.AlertType.kError,
+        wpilib.Alert.AlertType.kWarning,
+        wpilib.Alert.AlertType.kInfo,
+    )
 
 
 def error_alert(text: str) -> wpilib.Alert:
@@ -31,3 +35,8 @@ def error_alert(text: str) -> wpilib.Alert:
 def warning_alert(text: str) -> wpilib.Alert:
     """An alert for something that still works but needs a look."""
     return wpilib.Alert(text, _WARNING)
+
+
+def info_alert(text: str) -> wpilib.Alert:
+    """An alert that's only for information."""
+    return wpilib.Alert(text, _INFO)

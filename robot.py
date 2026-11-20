@@ -73,6 +73,13 @@ class MyRobot(commands2.TimedCommandRobot):
         self.teleop = bind_driver_controls(self.inputs, self.drivetrain)
         self.module_check = ModuleCheck(self.drivetrain)
 
+        # Sim only: moving poses and enum structs under /DashTest/ for dashboard testing.
+        self.dash_test = None
+        if self.isSimulation():
+            from utils.dashboard_test_topics import DashboardTestTopics
+
+            self.dash_test = DashboardTestTopics()
+
     def telemInit(self) -> None:
         """Initialize data logging: NT logging, console, DS, and vendor loggers.
 
@@ -113,6 +120,8 @@ class MyRobot(commands2.TimedCommandRobot):
         URCL.start(aliases, wpilib.DataLogManager.getLog())
 
     def robotPeriodic(self) -> None:
+        if self.dash_test is not None:
+            self.dash_test.periodic(wpilib.Timer.getFPGATimestamp())
         self.__frameTimingPeriodic()
 
     def disabledInit(self) -> None:
