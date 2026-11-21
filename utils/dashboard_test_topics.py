@@ -6,6 +6,12 @@ dashboard (raptaboard, Elastic, AdvantageScope) has something to decode:
 - ``OrbitPose`` (Pose2d): circles the field center once every ~6 s, facing
   along its path.
 - ``OrbitPose3d`` (Pose3d): the same circle, bobbing up and down.
+- ``CommandedSpeeds`` and ``MeasuredSpeeds`` (ChassisSpeeds, robot-relative):
+  a scripted drive that goes forward and back, strafes and spins, and what a
+  sluggish robot would do with it: the measured speeds lag 0.3 s behind and
+  reach 90% of the speed and 80% of the spin, so a dashboard shows the gap.
+  (The keyboard joystick can't spin the real sim drivetrain: rotation is on
+  Xbox axis 4 and the keyboard joystick has three axes.)
 - ``TumblePose`` (Pose3d): ``OrbitPose3d``'s place, yawing with it while
   it pitches (20 degrees each way) and rolls (15 degrees each way) back and
   forth, for a 3D pose view's axes.
@@ -96,7 +102,7 @@ import wpilib
 
 from utils.alerts import error_alert, info_alert, warning_alert
 
-from utils.wpimath_compat import Pose2d, Rotation2d, SwerveModuleVelocity, Translation2d, make_module_velocity
+from utils.wpimath_compat import ChassisVelocities, Pose2d, Rotation2d, SwerveModuleVelocity, Translation2d, make_module_velocity
 
 try:  # RobotPy 2026 and earlier (wpimath_compat has no 3D types yet)
     from wpimath.geometry import Pose3d, Rotation3d, Translation3d
@@ -104,6 +110,12 @@ except ImportError:  # RobotPy 2027 moved geometry up into wpimath
     from wpimath import Pose3d, Rotation3d, Translation3d
 
 PREFIX = "/DashTest/"
+SPEEDS_LAG_S = 0.3
+"""How far the scripted measured speeds lag behind the commanded ones (s)."""
+SPEEDS_REACHED = 0.9
+"""How much of the commanded speed the scripted measured speeds reach."""
+SPIN_REACHED = 0.8
+"""How much of the commanded spin the scripted measured speeds reach."""
 
 # Field size used by WPILib's 2026 field (meters); only the center matters here.
 FIELD_LENGTH_M = 16.54
@@ -166,6 +178,8 @@ class DashboardTestTopics:
         self.orbit = inst.getStructTopic(PREFIX + "OrbitPose", Pose2d).publish()
         self.orbit3d = inst.getStructTopic(PREFIX + "OrbitPose3d", Pose3d).publish()
         self.tumble = inst.getStructTopic(PREFIX + "TumblePose", Pose3d).publish()
+        self.commanded_speeds = inst.getStructTopic(PREFIX + "CommandedSpeeds", ChassisVelocities).publish()
+        self.measured_speeds = inst.getStructTopic(PREFIX + "MeasuredSpeeds", ChassisVelocities).publish()
         self.orbit_heading = inst.getStructTopic(PREFIX + "OrbitHeading", Rotation2d).publish()
         gyro = inst.getTable(PREFIX + "Gyro")
         self.gyro_type = gyro.getStringTopic(".type").publish()
@@ -294,6 +308,12 @@ class DashboardTestTopics:
                 ),
             )
         )
+        commanded = self._scripted_speeds(now_s)
+        self.commanded_speeds.set(ChassisVelocities(*commanded))
+        late = self._scripted_speeds(now_s - SPEEDS_LAG_S)
+        self.measured_speeds.set(
+            ChassisVelocities(late[0] * SPEEDS_REACHED, late[1] * SPEEDS_REACHED, late[2] * SPIN_REACHED)
+        )
         self.orbit_heading.set(p.rotation())
         self.gyro_value.set(-p.rotation().degrees())
         self.fleet.set([self._orbit_pose(angle + i * 2 * math.pi / 3) for i in range(3)])
@@ -324,6 +344,13 @@ class DashboardTestTopics:
         self._step_intake(now_s)
         self._log_arm_level()
         self.test_error.set(now_s % ALERT_CYCLE_S < ALERT_ON_S)
+
+    @staticmethod
+    def _scripted_speeds(t: float) -> tuple[float, float, float]:
+        """The scripted drive at time ``t`` (s): forward/back up to 2 m/s,
+        strafing up to 1 m/s and spinning up to 1.5 rad/s, each on its own
+        slow wave so the arrow wanders round."""
+        return (2.0 * math.sin(0.4 * t), 1.0 * math.sin(0.25 * t), 1.5 * math.sin(0.3 * t))
 
     @staticmethod
     def _load_tags() -> list[tuple[int, float, float, float]]:
