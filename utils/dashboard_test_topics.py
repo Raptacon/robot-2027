@@ -6,6 +6,9 @@ dashboard (raptaboard, Elastic, AdvantageScope) has something to decode:
 - ``OrbitPose`` (Pose2d): circles the field center once every ~6 s, facing
   along its path.
 - ``OrbitPose3d`` (Pose3d): the same circle, bobbing up and down.
+- ``TumblePose`` (Pose3d): ``OrbitPose3d``'s place, yawing with it while
+  it pitches (20 degrees each way) and rolls (15 degrees each way) back and
+  forth, for a 3D pose view's axes.
 - ``OrbitHeading`` (Rotation2d): ``OrbitPose``'s heading, for a gyro dial
   (counterclockwise, as WPILib counts).
 - ``Gyro`` (a table with ``.type`` "Gyro" and ``Value``, as a Sendable
@@ -162,6 +165,7 @@ class DashboardTestTopics:
 
         self.orbit = inst.getStructTopic(PREFIX + "OrbitPose", Pose2d).publish()
         self.orbit3d = inst.getStructTopic(PREFIX + "OrbitPose3d", Pose3d).publish()
+        self.tumble = inst.getStructTopic(PREFIX + "TumblePose", Pose3d).publish()
         self.orbit_heading = inst.getStructTopic(PREFIX + "OrbitHeading", Rotation2d).publish()
         gyro = inst.getTable(PREFIX + "Gyro")
         self.gyro_type = gyro.getStringTopic(".type").publish()
@@ -278,6 +282,16 @@ class DashboardTestTopics:
             Pose3d(
                 Translation3d(p.X(), p.Y(), bob_m),
                 Rotation3d(0.0, 0.0, p.rotation().radians()),
+            )
+        )
+        self.tumble.set(
+            Pose3d(
+                Translation3d(p.X(), p.Y(), bob_m),
+                Rotation3d(
+                    math.radians(15.0) * math.sin(now_s * 1.3),
+                    math.radians(20.0) * math.sin(now_s),
+                    p.rotation().radians(),
+                ),
             )
         )
         self.orbit_heading.set(p.rotation())
