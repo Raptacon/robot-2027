@@ -51,6 +51,9 @@ dashboard (raptaboard, Elastic, AdvantageScope) has something to decode:
   changes.
 - ``ToggleEcho`` (boolean): set every loop to the ``Toggle`` value the robot
   read, so a dashboard can show that the robot really got its write.
+- ``/SmartDashboard/DashTest/Lift``: a WPILib Mechanism2d (3 by 2): an
+  elevator rising and falling (0.4 to 1.2) with an arm on top swinging
+  between -60 and 60 degrees, for a dashboard's Mechanism2d view.
 - ``/SmartDashboard/DashTest/Auto mode`` and
   ``/SmartDashboard/DashTest/Test mode``: WPILib SendableChoosers, as a
   team would make for picking the auto routine (four options) and which
@@ -246,6 +249,11 @@ class DashboardTestTopics:
         self.test_chooser.setDefaultOption("Module check", "Module check")
         self.test_chooser.addOption("Drive square", "Drive square")
         wpilib.SmartDashboard.putData("DashTest/Test mode", self.test_chooser)
+        self.lift = wpilib.Mechanism2d(3.0, 2.0, wpilib.Color8Bit(0, 0, 32))
+        lift_base = self.lift.getRoot("base", 1.5, 0.2)
+        self.elevator = lift_base.appendLigament("elevator", 0.8, 90.0, 6.0, wpilib.Color8Bit(255, 0, 0))
+        self.arm = self.elevator.appendLigament("arm", 0.5, 0.0, 4.0, wpilib.Color8Bit(0, 255, 0))
+        wpilib.SmartDashboard.putData("DashTest/Lift", self.lift)
         self._last_choices: tuple[str, str] | None = None
 
         # A chooser by hand: the same topics a SendableChooser publishes.
@@ -344,6 +352,8 @@ class DashboardTestTopics:
         self._step_intake(now_s)
         self._log_arm_level()
         self.test_error.set(now_s % ALERT_CYCLE_S < ALERT_ON_S)
+        self.elevator.setLength(0.8 + 0.4 * math.sin(now_s * 0.7))
+        self.arm.setAngle(60.0 * math.sin(now_s * 1.1))
 
     @staticmethod
     def _scripted_speeds(t: float) -> tuple[float, float, float]:
