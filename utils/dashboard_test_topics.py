@@ -6,6 +6,9 @@ dashboard (raptaboard, Elastic, AdvantageScope) has something to decode:
 - ``OrbitPose`` (Pose2d): circles the field center once every ~6 s, facing
   along its path.
 - ``OrbitPose3d`` (Pose3d): the same circle, bobbing up and down.
+- ``BatteryVoltage`` (double): a battery resting near 12.6 V that sags
+  to about 11.2 V for 2 s of every 8 (as if under load) and drains slowly
+  (0.1 V a minute, back to full every 10 minutes), for a battery widget.
 - ``CommandedSpeeds`` and ``MeasuredSpeeds`` (ChassisSpeeds, robot-relative):
   a scripted drive that goes forward and back, strafes and spins, and what a
   sluggish robot would do with it: the measured speeds lag 0.3 s behind and
@@ -181,6 +184,7 @@ class DashboardTestTopics:
         self.orbit = inst.getStructTopic(PREFIX + "OrbitPose", Pose2d).publish()
         self.orbit3d = inst.getStructTopic(PREFIX + "OrbitPose3d", Pose3d).publish()
         self.tumble = inst.getStructTopic(PREFIX + "TumblePose", Pose3d).publish()
+        self.battery = inst.getDoubleTopic(PREFIX + "BatteryVoltage").publish()
         self.commanded_speeds = inst.getStructTopic(PREFIX + "CommandedSpeeds", ChassisVelocities).publish()
         self.measured_speeds = inst.getStructTopic(PREFIX + "MeasuredSpeeds", ChassisVelocities).publish()
         self.orbit_heading = inst.getStructTopic(PREFIX + "OrbitHeading", Rotation2d).publish()
@@ -316,6 +320,7 @@ class DashboardTestTopics:
                 ),
             )
         )
+        self.battery.set(self._battery_volts(now_s))
         commanded = self._scripted_speeds(now_s)
         self.commanded_speeds.set(ChassisVelocities(*commanded))
         late = self._scripted_speeds(now_s - SPEEDS_LAG_S)
@@ -354,6 +359,15 @@ class DashboardTestTopics:
         self.test_error.set(now_s % ALERT_CYCLE_S < ALERT_ON_S)
         self.elevator.setLength(0.8 + 0.4 * math.sin(now_s * 0.7))
         self.arm.setAngle(60.0 * math.sin(now_s * 1.1))
+
+    @staticmethod
+    def _battery_volts(t: float) -> float:
+        """The scripted battery at time ``t`` (s): 12.6 V resting, draining
+        0.1 V a minute (full again every 10 minutes), sagging 1.4 V under a
+        2 s load every 8 s."""
+        resting = 12.6 - 0.1 * ((t % 600.0) / 60.0)
+        load = 1.4 if t % 8.0 < 2.0 else 0.0
+        return resting - load
 
     @staticmethod
     def _scripted_speeds(t: float) -> tuple[float, float, float]:
